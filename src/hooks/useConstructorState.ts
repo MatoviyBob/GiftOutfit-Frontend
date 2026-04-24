@@ -7,6 +7,7 @@ import {
   getConstructorSymbols,
   getConstructorGift,
   type ConstructorGiftResult,
+  type ConstructorSymbol,
 } from '@/api/constructor'
 
 const STALE_TIME = 1000 * 60 * 60 * 24
@@ -59,8 +60,8 @@ export function useConstructorState({
   })
 
   const fetchGiftMutation = useMutation({
-    mutationFn: (symbolValue: string) =>
-      getConstructorGift(collection!, model!, backdrop!, symbolValue),
+    mutationFn: ({ symbol, giftNumber }: { symbol: string; giftNumber?: number }) =>
+      getConstructorGift(collection!, model!, backdrop!, symbol, giftNumber),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['constructor', 'gift', collection, model, backdrop],
@@ -71,10 +72,13 @@ export function useConstructorState({
   const ensureStringArray = (v: unknown): string[] =>
     Array.isArray(v) ? (v as string[]) : []
 
+  const ensureSymbolArray = (v: unknown): ConstructorSymbol[] =>
+    Array.isArray(v) ? (v as ConstructorSymbol[]) : []
+
   const collections = ensureStringArray(collectionsQuery.data)
   const models = ensureStringArray(modelsQuery.data)
   const backdrops = ensureStringArray(backdropsQuery.data)
-  const symbols = ensureStringArray(symbolsQuery.data)
+  const symbols = ensureSymbolArray(symbolsQuery.data)
 
   const isLoadingCollections = collectionsQuery.isLoading
   const isLoadingModels = modelsQuery.isLoading
@@ -109,4 +113,4 @@ export function useConstructorState({
   }
 }
 
-export type { ConstructorGiftResult }
+export type { ConstructorGiftResult, ConstructorSymbol }
