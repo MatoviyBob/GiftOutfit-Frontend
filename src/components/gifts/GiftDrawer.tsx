@@ -199,10 +199,11 @@ export const GiftDrawer: FC = () => {
       }))
     }
     if (editingFieldKey === 'pattern' && collection) {
-      return symbols.map((symbolName, id) => ({
-        id: id,
-        title: symbolName,
-        pattern: buildGiftPatternUrl(collection, symbolName),
+      return symbols.map((s) => ({
+        id: s.gift_number,
+        title: s.symbol,
+        pattern: buildGiftPatternUrl(collection, s.symbol),
+        gift_number: s.gift_number,
       }))
     }
     return []
@@ -236,10 +237,11 @@ export const GiftDrawer: FC = () => {
       }))
     }
     if (editingFieldKey === 'pattern' && collectionName) {
-      return freeformSymbols.map((symbolName) => ({
-        id: 0,
-        title: symbolName,
-        pattern: buildGiftPatternUrl(collectionName, symbolName),
+      return freeformSymbols.map((s) => ({
+        id: s.gift_number,
+        title: s.symbol,
+        pattern: buildGiftPatternUrl(collectionName, s.symbol),
+        gift_number: s.gift_number,
       }))
     }
     return []
@@ -418,7 +420,7 @@ export const GiftDrawer: FC = () => {
       const backdrop = selectedCell?.gift?.background?.name
       if (!collection || !model || !backdrop || !selectedCell) return
       try {
-        const result = await constructorState.fetchGift(item.title)
+        const result = await constructorState.fetchGift({ symbol: item.title, giftNumber: item.gift_number })
         const background = backgrounds?.find((bg: GiftBackground) => bg.name === result.backdrop)
         const updatedGift: Gift = {
           id: result.gift_number,
@@ -719,7 +721,12 @@ export const GiftDrawer: FC = () => {
               ...item,
               id: String(item.id),
             }))
-            .sort((a, b) => a.title.localeCompare(b.title))}
+            .sort((a, b) =>
+              // Patterns: group by name first, then by gift_number within same name
+              editingFieldKey === 'pattern'
+                ? a.title.localeCompare(b.title) || (Number(a.id) - Number(b.id))
+                : a.title.localeCompare(b.title)
+            )}
           handleSelect={handleSelect}
         />
 

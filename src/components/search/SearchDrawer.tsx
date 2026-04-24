@@ -14,6 +14,8 @@ type Item = {
   image?: string
   background?: GiftBackground
   pattern?: string
+  /** Gift number shown next to pattern name so duplicates are distinguishable. */
+  gift_number?: number
 }
 
 type Props = {
@@ -98,7 +100,14 @@ export const SearchDrawer: FC<Props> = ({ open, onOpenChange, title, items, hand
                     }}
                   />
                 )}
-                <span>{item.title}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="truncate">{item.title}</span>
+                  {item.gift_number != null && item.gift_number > 0 && (
+                    <span className="ml-2 text-xs text-muted-foreground tabular-nums">
+                      #{item.gift_number}
+                    </span>
+                  )}
+                </span>
               </div>
             ))}
           </div>

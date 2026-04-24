@@ -82,32 +82,28 @@ export const useDrawerItems = ({
     // PATTERNS
     if (editingFieldKey === 'pattern') {
       if (mode === 'freeform') {
-        // В freeform режиме собираем все уникальные паттерны из всего giftTree
-        const allPatterns = new Map<string, { symbol: string; gift_number: number; url: string }>()
-        
-        // Проходим по всем моделям и фонам
+        // Собираем ВСЕ паттерны из giftTree — дубликаты по имени сохраняются,
+        // т.к. каждый привязан к конкретному подарку (gift_number).
+        const allPatterns: { symbol: string; gift_number: number; url: string }[] = []
+
         Object.keys(giftTree).forEach((modelKey) => {
           Object.keys(giftTree[modelKey]).forEach((backdropKey) => {
             const symbols = giftTree[modelKey]?.[backdropKey]?.symbols ?? []
             symbols.forEach((s) => {
-              // Используем symbol как ключ, чтобы избежать дубликатов
-              if (!allPatterns.has(s.symbol)) {
-                allPatterns.set(s.symbol, s)
+              if (s.symbol) {
+                allPatterns.push(s)
               }
             })
           })
         })
-        
-        // Возвращаем все уникальные паттерны без id (id = 0)
-        return Array.from(allPatterns.values())
-          .filter((s) => s.symbol) // Фильтруем паттерны без symbol
-          .map((s) => ({
-            id: 0, // В freeform режиме id всегда 0
-            title: s.symbol,
-            url: s.url,
-            gift_number: s.gift_number,
-            pattern: buildGiftPatternUrl(giftName, s.symbol),
-          }))
+
+        return allPatterns.map((s) => ({
+          id: s.gift_number,         // Уникальный ID подарка вместо 0
+          title: s.symbol,
+          url: s.url,
+          gift_number: s.gift_number,
+          pattern: buildGiftPatternUrl(giftName, s.symbol),
+        }))
       } else {
         // В constructor режиме используем текущую логику
         if (!background) return []
