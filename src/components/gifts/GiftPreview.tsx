@@ -73,16 +73,19 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
               // 1. Update Zustand store immediately (toggles equip/unequip)
               equipGift(gift)
 
-              // 2. Update query cache so re-fetches carry the right value
+              // 2. Update ['user'] query cache so re-fetches carry the right value
               if (userId) {
                 queryClient.setQueryData<TelegramUser>(['user', userId], (old) =>
                   old ? { ...old, equipped_gift: nextGift } : old
                 )
               }
 
-              // 3. Persist to server — fire-and-forget, no rollback.
-              //    Local store already has the correct state.
-              updateEquippedGift(nextGift)
+              // 3. Persist to server; on success refresh ['my-settings'] from server
+              //    (same cross-device sync pattern as grids). No rollback on failure —
+              //    local store already has the correct state.
+              updateEquippedGift(nextGift).then(() => {
+                queryClient.invalidateQueries({ queryKey: ['my-settings'] })
+              })
             }}
             title={isEquipped ? t('giftDrawer.unWear') : t('giftDrawer.wear')}
           >

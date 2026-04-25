@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import type { Gift } from '@/types/gift'
-import { updateFavoritePalette } from '@/api/user'
 
 export const MAX_FAVORITES = 3
 const FAVORITE_KEY = 'favorite-palette'
@@ -61,6 +60,9 @@ type GiftStore = {
     favoritePalette: string[]
     toggleFavorite: (name: string) => void
     setFavoritePalette: (palette: string[]) => void
+    /** Timestamp of last LOCAL change to settings (equipped/palette) — used to avoid
+     *  overwriting recent local changes when server data arrives. */
+    lastSettingsChange: number
 }
 
 const EQUIPPED_KEY = 'equipped-gift'
@@ -87,29 +89,31 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
       const next = isSame ? null : gift
       if (next) localStorage.setItem(EQUIPPED_KEY, JSON.stringify(next))
       else localStorage.removeItem(EQUIPPED_KEY)
-      return { equippedGift: next }
+      return { equippedGift: next, lastSettingsChange: Date.now() }
     }),
     unequipGift: () => {
       localStorage.removeItem(EQUIPPED_KEY)
-      set({ equippedGift: null })
+      set({ equippedGift: null, lastSettingsChange: Date.now() })
     },
 
     favoritePalette: loadFavoritePalette(),
+    // NOTE: does NOT call updateFavoritePalette API — that's done in useFavoritePalette hook
     toggleFavorite: (name) => set((state) => {
       const isSelected = state.favoritePalette.includes(name)
       const next = isSelected
         ? state.favoritePalette.filter((n) => n !== name)
         : state.favoritePalette.length >= MAX_FAVORITES
-          ? state.favoritePalette // at limit, ignore
+          ? state.favoritePalette
           : [...state.favoritePalette, name]
       saveFavoritePalette(next)
-      updateFavoritePalette(next) // fire-and-forget, no rollback
-      return { favoritePalette: next }
+      return { favoritePalette: next, lastSettingsChange: Date.now() }
     }),
     setFavoritePalette: (palette) => {
       saveFavoritePalette(palette)
       set({ favoritePalette: palette })
     },
+
+    lastSettingsChange: 0,
   
     selectField: (key, value, extra, mode = 'constructor') => {
       const state = get()

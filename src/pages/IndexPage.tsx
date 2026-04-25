@@ -14,7 +14,7 @@ import { generateProfileShareLink } from '@/lib/shareProfile'
 import { trackProfileView, getUser, getMySettings, type TelegramUser } from '@/api/user'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Spinner } from '@/components/ui/spinner'
 import { useGiftStore } from '@/stores/giftStore'
 
@@ -26,6 +26,7 @@ export const IndexPage: FC = () => {
   const equipGift = useGiftStore((s) => s.equipGift)
   const unequipGift = useGiftStore((s) => s.unequipGift)
   const setFavoritePalette = useGiftStore((s) => s.setFavoritePalette)
+  const queryClient = useQueryClient()
 
   // Загружаем данные пользователя с сервера для получения bio + equipped_gift
   const { data: user, isLoading: isLoadingUser } = useQuery<TelegramUser>({
@@ -34,22 +35,28 @@ export const IndexPage: FC = () => {
     enabled: !!telegramUser?.id,
   })
 
-  // Load settings from server once after user is known — sync to Zustand store.
-  // Uses a ref so we never re-apply server data over local changes the user just made.
-  const hasSyncedSettings = useRef(false)
+  // Fetch settings from server — same pattern as grids (no staleTime = refetch on mount
+  // and window refocus, enabling cross-device sync).
+  const { data: serverSettings } = useQuery({
+    queryKey: ['my-settings'],
+    queryFn: getMySettings,
+    enabled: !!telegramUser?.id,
+  })
+
+  // Sync server settings to Zustand store.
+  // Guard: skip if the user made a local change within the last 8 seconds
+  // (prevents server response from overwriting an in-flight optimistic update).
   useEffect(() => {
-    if (!telegramUser?.id || hasSyncedSettings.current) return
-    hasSyncedSettings.current = true
-    getMySettings()
-      .then((settings) => {
-        if (settings.equipped_gift) equipGift(settings.equipped_gift)
-        else if (settings.equipped_gift === null) unequipGift()
-        if (Array.isArray(settings.favorite_palette)) {
-          setFavoritePalette(settings.favorite_palette)
-        }
-      })
-      .catch(() => { /* keep localStorage values on network error */ })
-  }, [telegramUser?.id])
+    if (!serverSettings) return
+    const sinceLocalChange = Date.now() - useGiftStore.getState().lastSettingsChange
+    if (sinceLocalChange < 8_000) return   // local change too recent — skip
+
+    if (serverSettings.equipped_gift) equipGift(serverSettings.equipped_gift)
+    else if (serverSettings.equipped_gift === null) unequipGift()
+    if (Array.isArray(serverSettings.favorite_palette)) {
+      setFavoritePalette(serverSettings.favorite_palette)
+    }
+  }, [serverSettings])
 
   // Отслеживаем просмотр своего профиля при загрузке
   useEffect(() => {

@@ -159,7 +159,7 @@ export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = fal
 
   return (
     <div
-      className="relative flex flex-col items-center px-4 pb-4 overflow-hidden transition-all duration-500"
+      className="relative flex flex-col items-center px-4 pb-1 overflow-hidden transition-all duration-500"
       style={wornBgStyle}
     >
       {/* Pattern overlay from worn gift */}
@@ -232,11 +232,11 @@ export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = fal
         )}
       </div>
 
-      <p className="relative z-10 text-sm text-muted-foreground text-shadow-sm mb-4">
+      <p className="relative z-10 text-sm text-muted-foreground text-shadow-sm mb-2">
         {isOwnProfile ? t('profile.online') : t('profile.lastSeen')}
       </p>
 
-      <div className="relative z-10 text-shadow-sm">
+      <div className="relative z-10 text-shadow-sm mb-1">
         <ProfileViewCounter
           viewCount={user?.view_count}
           uniqueViewCount={user?.unique_view_count}
