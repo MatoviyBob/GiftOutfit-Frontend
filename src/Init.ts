@@ -35,13 +35,7 @@ export async function init(options: {
   initSDK();
 
   
-  // Add Eruda for debugging on mobile (iOS/Android)
-  if (['ios', 'android'].includes(options.platform)) {
-    void import('eruda').then(({ default: eruda }) => {
-      eruda.init();
-      eruda.position({ x: window.innerWidth - 50, y: 0 });
-    });
-  }
+  // Eruda disabled in production
   
   if (swipeBehavior.mount.isAvailable()) {
     swipeBehavior.mount();

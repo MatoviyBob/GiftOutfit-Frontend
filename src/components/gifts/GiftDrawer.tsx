@@ -3,6 +3,7 @@ import {
   Drawer,
   DrawerContent,
   DrawerFooter,
+  DrawerTitle,
 } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import type { Gift, GiftBackground } from '@/types/gift'
@@ -646,6 +647,7 @@ export const GiftDrawer: FC = () => {
       repositionInputs={false}
     >
       <DrawerContent className="z-1000 h-screen rounded-none bg-transparent border-none [&>div:first-child]:hidden">
+        <DrawerTitle className="sr-only">Gift Editor</DrawerTitle>
         {selectedCell !== undefined && (
           <div className="flex w-full h-full flex-col gap-3 pb-6 bg-background rounded-t-3xl text-white overflow-y-auto">
             <GiftPreview
