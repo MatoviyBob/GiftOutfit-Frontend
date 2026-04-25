@@ -249,12 +249,19 @@ export const GiftDrawer: FC = () => {
       }))
     }
     if (editingFieldKey === 'pattern' && collectionName) {
-      return freeformSymbols.map((s) => ({
-        id: s.gift_number,
-        title: s.symbol,
-        pattern: buildGiftPatternUrl(collectionName, s.symbol),
-        gift_number: s.gift_number,
-      }))
+      // Freeform: show unique patterns only (no duplicates, no gift numbers)
+      const seen = new Set<string>()
+      return freeformSymbols
+        .filter((s) => {
+          if (seen.has(s.symbol)) return false
+          seen.add(s.symbol)
+          return true
+        })
+        .map((s, index) => ({
+          id: index,
+          title: s.symbol,
+          pattern: buildGiftPatternUrl(collectionName, s.symbol),
+        }))
     }
     return []
   }, [
@@ -422,21 +429,26 @@ export const GiftDrawer: FC = () => {
         ? freeformDrawerItems
         : drawerItems
 
-  // Reflects whether the data for the currently-edited field is still loading.
-  // Passed to SearchDrawer so it can show a spinner vs. an "empty" message.
+  // Whether the data for the currently-edited field is being fetched RIGHT NOW.
+  // Uses isFetching (not isPending) so it can never get stuck in a true state:
+  // isFetching is false the moment the HTTP request finishes (success or error),
+  // whereas isPending stays true for disabled queries.
+  // The GiftFieldButton disabled-state uses isLoadingSymbols (isPending-based)
+  // for stricter gating; this flag is only for the SearchDrawer spinner.
   const searchDrawerIsLoading = useMemo(() => {
     if (!editingFieldKey) return false
     if (isConstructorModeActive) {
       if (editingFieldKey === 'gifts')      return constructorState.isLoadingCollections
       if (editingFieldKey === 'model')      return constructorState.isLoadingModels
       if (editingFieldKey === 'background') return constructorState.isLoadingBackdrops
-      if (editingFieldKey === 'pattern')    return constructorState.isLoadingSymbols
+      // isFetchingSymbols = symbolsEnabled && symbolsQuery.isFetching (never stuck)
+      if (editingFieldKey === 'pattern')    return constructorState.isFetchingSymbols
     } else {
       if (editingFieldKey === 'gifts')      return collectionsQuery.isLoading
       if (editingFieldKey === 'model')      return freeformModelsQuery.isLoading
       if (editingFieldKey === 'background') return freeformBackdropsAndSymbols.isLoadingBackdrops
-      // Cover the enabled→fetching idle gap the same way useConstructorState does
-      if (editingFieldKey === 'pattern')    return legacyEnabled && !!giftName && freeformSymbolsQuery.isPending
+      // isFetching: true only during active HTTP request, never permanently true
+      if (editingFieldKey === 'pattern')    return freeformSymbolsQuery.isFetching
     }
     return false
   }, [
@@ -445,13 +457,11 @@ export const GiftDrawer: FC = () => {
     constructorState.isLoadingCollections,
     constructorState.isLoadingModels,
     constructorState.isLoadingBackdrops,
-    constructorState.isLoadingSymbols,
+    constructorState.isFetchingSymbols,
     collectionsQuery.isLoading,
     freeformModelsQuery.isLoading,
     freeformBackdropsAndSymbols.isLoadingBackdrops,
-    legacyEnabled,
-    giftName,
-    freeformSymbolsQuery.isPending,
+    freeformSymbolsQuery.isFetching,
   ])
 
   const handleSelect = async (item: DrawerItem) => {

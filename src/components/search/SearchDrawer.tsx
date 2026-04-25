@@ -88,7 +88,7 @@ export const SearchDrawer: FC<Props> = ({ open, onOpenChange, title, items, isLo
           </div>
         ) : items.length === 0 ? (
           <div className="w-full h-full flex justify-center items-center">
-            <p className="text-sm text-muted-foreground">{t('search.noResults')}</p>
+            <p className="text-sm text-foreground/70">{t('search.noResults')}</p>
           </div>
         ) : (
           <div className="mt-4 overflow-y-auto space-y-2">

@@ -102,11 +102,15 @@ export function useConstructorState({
   const isLoadingCollections = collectionsQuery.isLoading
   const isLoadingModels = modelsQuery.isLoading
   const isLoadingBackdrops = backdropsQuery.isLoading
-  // Use isPending (not just isLoading) so we also cover the brief window between
-  // enabled=true and fetchStatus='fetching', preventing the pattern button from
-  // becoming clickable before symbols have arrived.
+  // symbolsEnabled mirrors the query's own `enabled` flag.
   const symbolsEnabled = enabled && !!collection && !!model && !!backdrop
+  // isPending covers the brief idle gap (enabled=true but fetch not started yet).
+  // Used only for the GiftFieldButton disabled-state — keeps the button disabled
+  // until symbols have actually arrived.
   const isLoadingSymbols = symbolsEnabled && symbolsQuery.isPending
+  // isFetching is true only while an HTTP request is in flight — never gets stuck.
+  // Used for the SearchDrawer loading indicator so it can't loop forever.
+  const isFetchingSymbols = symbolsEnabled && symbolsQuery.isFetching
 
   const error =
     collectionsQuery.error ??
@@ -130,6 +134,7 @@ export function useConstructorState({
     isLoadingModels,
     isLoadingBackdrops,
     isLoadingSymbols,
+    isFetchingSymbols,
     isFetchingGift: fetchGiftMutation.isPending,
     error,
     fetchGift: fetchGiftMutation.mutateAsync,

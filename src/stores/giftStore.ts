@@ -36,7 +36,7 @@ type GiftStore = {
 export const useGiftStore = create<GiftStore>((set, get) => ({
     selectedCell: null,
     setSelectedCell: (cell) => set({ selectedCell: cell }),
-    clearSelectedCell: () => set({ selectedCell: null }),
+    clearSelectedCell: () => set({ selectedCell: null, editingFieldKey: null }),
 
     editingFieldKey: null,
     setEditingFieldKey: (key) => set(() => ({ editingFieldKey: key })),
