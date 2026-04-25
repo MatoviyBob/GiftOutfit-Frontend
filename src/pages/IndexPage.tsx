@@ -11,7 +11,7 @@ import { Settings, Share2 } from "lucide-react"
 import { Link } from 'react-router-dom';
 import { SubscriptionItem } from '@/components/subscription/SubscriptionItem'
 import { generateProfileShareLink } from '@/lib/shareProfile'
-import { trackProfileView, getUser, getMySettings, type TelegramUser } from '@/api/user'
+import { trackProfileView, getUser, type TelegramUser } from '@/api/user'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n'
 import { useQuery } from '@tanstack/react-query'
@@ -33,23 +33,18 @@ export const IndexPage: FC = () => {
     enabled: !!telegramUser?.id,
   })
 
-  // Load settings (equipped_gift + favorite_palette) from server
-  const { data: mySettings } = useQuery({
-    queryKey: ['my-settings'],
-    queryFn: getMySettings,
-    enabled: !!telegramUser?.id,
-    staleTime: 1000 * 60 * 5,
-  })
-
-  // Sync equipped_gift from server settings into the Zustand store
+  // Sync equipped_gift from GET /users/{id} response into the Zustand store.
+  // Only runs once per user load — we trust the local store after that.
+  const hasSyncedEquipped = useRef(false)
   useEffect(() => {
-    if (!mySettings) return
-    if (mySettings.equipped_gift) {
-      equipGift(mySettings.equipped_gift)
-    } else if (mySettings.equipped_gift === null) {
+    if (!user || hasSyncedEquipped.current) return
+    hasSyncedEquipped.current = true
+    if (user.equipped_gift) {
+      equipGift(user.equipped_gift)
+    } else if (user.equipped_gift === null) {
       unequipGift()
     }
-  }, [mySettings?.equipped_gift])
+  }, [user])
 
   // Отслеживаем просмотр своего профиля при загрузке
   useEffect(() => {
