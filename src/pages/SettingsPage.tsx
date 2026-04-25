@@ -1,12 +1,13 @@
-import type { FC } from 'react'
-// import { useMemo } from 'react'
+import { type FC, useState } from 'react'
 import { Page } from '@/components/Page'
 import { Item, ItemActions, ItemContent, ItemGroup, ItemMedia, ItemTitle } from '@/components/ui/item'
-import { ChevronRightIcon, Megaphone, CreditCardIcon, MessageSquare, ImageIcon, Languages } from 'lucide-react'
+import { ChevronRightIcon, Megaphone, CreditCardIcon, MessageSquare, ImageIcon, Languages, Palette } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { useSubscription } from '@/hooks/useSubscription'
 import { useImageProxySetting } from '@/hooks/useImageProxySetting'
 import { useTranslation, type Locale } from '@/i18n'
+import { FavoritePaletteDrawer } from '@/components/settings/FavoritePaletteDrawer'
+import { useFavoritePalette } from '@/hooks/useFavoritePalette'
 
 import { Link } from 'react-router-dom'
 import {
@@ -21,6 +22,8 @@ export const SettingsPage: FC = () => {
   const { t, locale, setLocale } = useTranslation()
   const { data: subscription, isLoading, error } = useSubscription()
   const [isProxyEnabled, setIsProxyEnabled] = useImageProxySetting()
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false)
+  const { favorites } = useFavoritePalette()
 
   const settingsButtonGroups = [
     {
@@ -31,6 +34,14 @@ export const SettingsPage: FC = () => {
           icon: <CreditCardIcon className="p-1 size-6 bg-[#72aee6] rounded-sm text-white" />,
           link: '/subscription',
           external: false,
+        },
+        {
+          title: t('settings.favoritePalette'),
+          icon: <Palette className="p-1 size-6 bg-[#a78bfa] rounded-sm text-white" />,
+          link: null,
+          external: false,
+          badge: favorites.length > 0 ? `${favorites.length}/3` : undefined,
+          onClick: () => setIsPaletteOpen(true),
         },
       ],
     },
@@ -90,8 +101,22 @@ export const SettingsPage: FC = () => {
               <ItemGroup className="bg-card rounded-xl overflow-hidden mt-0">
                 {group.items.map((item, index) => (
                   <>
-                    <Item size="sm" asChild key={item.title}>
-                      <Link to={item.link}>
+                    {item.link !== null ? (
+                      <Item size="sm" asChild key={item.title}>
+                        <Link to={item.link!}>
+                          <ItemMedia>
+                            {item.icon}
+                          </ItemMedia>
+                          <ItemContent>
+                            <ItemTitle>{item.title}</ItemTitle>
+                          </ItemContent>
+                          <ItemActions>
+                            <ChevronRightIcon className="size-4" />
+                          </ItemActions>
+                        </Link>
+                      </Item>
+                    ) : (
+                      <Item size="sm" key={item.title} onClick={item.onClick} className="cursor-pointer">
                         <ItemMedia>
                           {item.icon}
                         </ItemMedia>
@@ -99,10 +124,13 @@ export const SettingsPage: FC = () => {
                           <ItemTitle>{item.title}</ItemTitle>
                         </ItemContent>
                         <ItemActions>
+                          {item.badge && (
+                            <span className="text-xs text-foreground/50 mr-1">{item.badge}</span>
+                          )}
                           <ChevronRightIcon className="size-4" />
                         </ItemActions>
-                      </Link>
-                    </Item>
+                      </Item>
+                    )}
                     {index < group.items.length - 1 && <Separator />}
                   </>
                 ))}
@@ -140,6 +168,11 @@ export const SettingsPage: FC = () => {
           </div>
         </div>
       </div>
+
+      <FavoritePaletteDrawer
+        open={isPaletteOpen}
+        onOpenChange={setIsPaletteOpen}
+      />
     </Page>
   )
 }

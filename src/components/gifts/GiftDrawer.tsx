@@ -24,6 +24,7 @@ import apiClient from '@/api/apiClient'
 import { useConstructorState } from '@/hooks/useConstructorState'
 import { useFreeformBackdropsAndSymbols } from '@/hooks/useFreeformBackdropsAndSymbols'
 import { useEffect, useMemo, useState, useRef } from 'react'
+import { useFavoritePalette } from '@/hooks/useFavoritePalette'
 import { useDrawerItems, type DrawerItem } from '@/hooks/useDrawerItems'
 import { GiftPreview } from './GiftPreview'
 import { GiftFieldButton } from './GiftFieldButton'
@@ -61,6 +62,7 @@ export const GiftDrawer: FC = () => {
   const setEditingFieldKey = useGiftStore((state) => state.setEditingFieldKey)
   const selectField = useGiftStore((s) => s.selectField)
 
+  const { isFavorite } = useFavoritePalette()
   const [constructorMode, setConstructorMode] = useState<ConstructorMode>('constructor')
   const prevModeRef = useRef<ConstructorMode>('constructor')
   const [isCollectionSearchOpen, setIsCollectionSearchOpen] = useState(false)
@@ -778,12 +780,20 @@ export const GiftDrawer: FC = () => {
               ...item,
               id: String(item.id),
             }))
-            .sort((a, b) =>
+            .sort((a, b) => {
               // Patterns: group by name first, then by gift_number within same name
-              editingFieldKey === 'pattern'
-                ? a.title.localeCompare(b.title) || (Number(a.id) - Number(b.id))
-                : a.title.localeCompare(b.title)
-            )}
+              if (editingFieldKey === 'pattern') {
+                return a.title.localeCompare(b.title) || (Number(a.id) - Number(b.id))
+              }
+              // Backgrounds: favorites float to the top, then alphabetical within each group
+              if (editingFieldKey === 'background') {
+                const aFav = isFavorite(a.title)
+                const bFav = isFavorite(b.title)
+                if (aFav && !bFav) return -1
+                if (!aFav && bFav) return 1
+              }
+              return a.title.localeCompare(b.title)
+            })}
           isLoading={searchDrawerIsLoading}
           handleSelect={handleSelect}
         />
