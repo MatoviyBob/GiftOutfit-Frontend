@@ -30,6 +30,16 @@ export const deleteGrid = async (id: number) => {
     return res.data
 }
 
+export const renameGrid = async (id: number, name: string) => {
+    const res = await apiClient.patch(`/me/grids/${id}`, { name })
+    return res.data
+}
+
+export const reorderGrids = async (ids: number[]) => {
+    const res = await apiClient.patch(`/me/grids/reorder`, { ids })
+    return res.data
+}
+
 // GET все гриды с их строками и ячейками
 export const getGrids = async (userId: number): Promise<Grid[]> => {
     const { data } = await apiClient.get(`/users/${userId}/grids`); // пример user_id

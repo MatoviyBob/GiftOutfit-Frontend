@@ -148,6 +148,21 @@
   }
 }
 
+@keyframes tab-shake {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-2deg); }
+  40% { transform: rotate(2deg); }
+  60% { transform: rotate(-2deg); }
+  80% { transform: rotate(2deg); }
+}
+
+@layer utilities {
+  .animate-tab-shake {
+    animation: tab-shake 0.5s ease-in-out infinite;
+    transform-origin: center bottom;
+  }
+}
+
 @keyframes float {
   0%, 100% {
     transform: translate(-50%, calc(-50% + 0px));

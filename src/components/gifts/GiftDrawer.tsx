@@ -14,7 +14,7 @@ import { useMutation, useQueryClient, useQuery, useQueries } from '@tanstack/rea
 import { getConstructorCollections, getConstructorModels, getConstructorCollectionAllSymbols, type ConstructorSymbol } from '@/api/constructor'
 import { updateGiftCell, togglePinGift, getGrids, type Grid } from '@/api/gifts'
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
-import { Pin } from 'lucide-react'
+import { Pin, Copy, ClipboardPaste } from 'lucide-react'
 import { toast } from 'sonner'
 import { Spinner } from '../ui/spinner'
 import { useBackgrounds } from '@/hooks/useGiftQueries'
@@ -61,6 +61,8 @@ export const GiftDrawer: FC = () => {
   const editingFieldKey = useGiftStore((state) => state.editingFieldKey)
   const setEditingFieldKey = useGiftStore((state) => state.setEditingFieldKey)
   const selectField = useGiftStore((s) => s.selectField)
+  const copiedGift = useGiftStore((s) => s.copiedGift)
+  const copyGift = useGiftStore((s) => s.copyGift)
 
   const { isFavorite } = useFavoritePalette()
   const [constructorMode, setConstructorMode] = useState<ConstructorMode>('constructor')
@@ -658,9 +660,26 @@ export const GiftDrawer: FC = () => {
             />
 
             <div>
-              {/* Табы для выбора режима конструктора */}
+              {/* Табы для выбора режима конструктора + кнопки копирования */}
               {isOwnProfile && (
-                <div className="mx-4 mb-3 flex justify-center">
+                <div className="mx-4 mb-3 flex items-center justify-between gap-2">
+                  {/* Copy button — left */}
+                  <button
+                    className={`w-9 h-9 flex items-center justify-center rounded-full border border-border transition-colors ${
+                      selectedCell?.gift
+                        ? 'text-foreground bg-card/50 hover:bg-card cursor-pointer'
+                        : 'text-muted-foreground/30 cursor-not-allowed'
+                    }`}
+                    disabled={!selectedCell?.gift}
+                    onClick={() => {
+                      if (selectedCell?.gift) copyGift(selectedCell.gift)
+                    }}
+                    title="Copy gift"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+
+                  {/* Constructor / Freeform tabs — center */}
                   <Tabs value={constructorMode} onValueChange={(value) => setConstructorMode(value as ConstructorMode)}>
                     <TabsList className="inline-flex gap-x-2 p-0 px-1 justify-center bg-card/50 rounded-full border border-solid border-border">
                       <TabsTrigger
@@ -675,17 +694,25 @@ export const GiftDrawer: FC = () => {
                       >
                         <span>{t('giftDrawer.freeform')}</span>
                       </TabsTrigger>
-                      {/* <TabsTrigger
-                        value="collection"
-                        className="px-4 !grow-0 whitespace-nowrap bg-transparent !data-[state=active]:bg-card dark:!data-[state=active]:bg-card rounded-full border-0 border-transparent data-[state=active]:border-primary !shadow-none !data-[state=active]:shadow-none shrink-0 text-muted-foreground data-[state=active]:text-foreground h-auto cursor-pointer"
-                        onClick={() => {
-                          setIsCollectionSearchOpen(true)
-                        }}
-                      >
-                        <span>{t('giftDrawer.collection')}</span>
-                      </TabsTrigger> */}
                     </TabsList>
                   </Tabs>
+
+                  {/* Paste button — right */}
+                  <button
+                    className={`w-9 h-9 flex items-center justify-center rounded-full border border-border transition-colors ${
+                      copiedGift
+                        ? 'text-primary bg-card/50 hover:bg-card cursor-pointer'
+                        : 'text-muted-foreground/30 cursor-not-allowed'
+                    }`}
+                    disabled={!copiedGift}
+                    onClick={() => {
+                      if (!copiedGift || !selectedCell) return
+                      useGiftStore.setState({ selectedCell: { ...selectedCell, gift: copiedGift } })
+                    }}
+                    title="Paste gift"
+                  >
+                    <ClipboardPaste className="w-4 h-4" />
+                  </button>
                 </div>
               )}
 
