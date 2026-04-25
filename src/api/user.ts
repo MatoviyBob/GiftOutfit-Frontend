@@ -1,6 +1,11 @@
 import apiClient from './apiClient';
 import type { Gift } from '@/types/gift';
 
+export interface MySettings {
+  equipped_gift: Gift | null;
+  favorite_palette: string[];
+}
+
 export interface TelegramUser {
   id: number;
   first_name?: string;
@@ -21,6 +26,16 @@ export interface TelegramUser {
  */
 export const updateEquippedGift = async (gift: Gift | null) => {
     const res = await apiClient.put(`/me/equipped-gift`, { gift });
+    return res.data;
+};
+
+export const getMySettings = async (): Promise<MySettings> => {
+    const res = await apiClient.get('/me/settings');
+    return res.data;
+};
+
+export const updateFavoritePalette = async (palette: string[]) => {
+    const res = await apiClient.put('/me/favorite-palette', { palette });
     return res.data;
 };
 
