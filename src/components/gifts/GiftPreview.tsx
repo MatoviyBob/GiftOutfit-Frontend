@@ -6,6 +6,9 @@ import { PatternBackground } from './PatternBackground'
 import { buildGiftPatternUrl, buildTelegramGiftUrl } from '@/lib/giftUrls'
 import { useTranslation } from '@/i18n'
 import { useGiftStore } from '@/stores/giftStore'
+import { updateEquippedGift } from '@/api/user'
+import { useQueryClient } from '@tanstack/react-query'
+import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
 
 type GiftPreviewProps = {
   gift: Gift | null | undefined
@@ -16,6 +19,9 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
   const { t } = useTranslation()
   const equippedGift = useGiftStore((s) => s.equippedGift)
   const equipGift = useGiftStore((s) => s.equipGift)
+  const queryClient = useQueryClient()
+  const lp = retrieveLaunchParams()
+  const userId = lp.tgWebAppData?.user?.id
 
   if (!gift) return (
     <div className="relative min-h-[200px] text-white overflow-hidden bg-muted"></div>
@@ -59,9 +65,19 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
                 ? 'bg-yellow-400/40 ring-1 ring-yellow-400/70'
                 : 'bg-white/15'
             }`}
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation()
+              // Toggle equipped state locally (instant UI)
               equipGift(gift)
+              // Determine what to send: if currently equipped → null (unequip), else this gift
+              const nextGift = isEquipped ? null : gift
+              try {
+                await updateEquippedGift(nextGift)
+                // Invalidate user cache so ProfileHeader updates
+                if (userId) queryClient.invalidateQueries({ queryKey: ['user', userId] })
+              } catch {
+                // Silent — localStorage already updated; server will sync on next load
+              }
             }}
             title={isEquipped ? t('giftDrawer.unWear') : t('giftDrawer.wear')}
           >

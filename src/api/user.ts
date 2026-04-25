@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import type { Gift } from '@/types/gift';
 
 export interface TelegramUser {
   id: number;
@@ -10,7 +11,18 @@ export interface TelegramUser {
   subscription_active?: boolean;
   view_count?: number;
   unique_view_count?: number;
+  /** Gift currently worn/equipped by this user (stored on server) */
+  equipped_gift?: Gift | null;
 }
+
+/**
+ * Save the equipped gift to the server (PUT /me/equipped-gift).
+ * Pass null to unequip.
+ */
+export const updateEquippedGift = async (gift: Gift | null) => {
+    const res = await apiClient.put(`/me/equipped-gift`, { gift });
+    return res.data;
+};
 
 export const updateBio = async (bio: string) => {
     const res = await apiClient.put(`/me/bio`, { bio });
