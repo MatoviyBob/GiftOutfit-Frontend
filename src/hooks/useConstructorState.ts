@@ -72,8 +72,27 @@ export function useConstructorState({
   const ensureStringArray = (v: unknown): string[] =>
     Array.isArray(v) ? (v as string[]) : []
 
-  const ensureSymbolArray = (v: unknown): ConstructorSymbol[] =>
-    Array.isArray(v) ? (v as ConstructorSymbol[]) : []
+  /**
+   * Safely normalise whatever React Query cached.
+   * Old cache may contain plain strings (before ConstructorSymbol migration).
+   * New format is {symbol, gift_number} objects.
+   * Both are handled — strings are promoted to {symbol, gift_number: 0}.
+   */
+  const ensureSymbolArray = (v: unknown): ConstructorSymbol[] => {
+    if (!Array.isArray(v)) return []
+    return v.flatMap((item): ConstructorSymbol[] => {
+      if (typeof item === 'string') {
+        return item ? [{ symbol: item, gift_number: 0 }] : []
+      }
+      if (item && typeof item === 'object') {
+        const s = item as Record<string, unknown>
+        const symbol = typeof s.symbol === 'string' ? s.symbol : ''
+        if (!symbol) return []
+        return [{ symbol, gift_number: typeof s.gift_number === 'number' ? s.gift_number : 0 }]
+      }
+      return []
+    })
+  }
 
   const collections = ensureStringArray(collectionsQuery.data)
   const models = ensureStringArray(modelsQuery.data)

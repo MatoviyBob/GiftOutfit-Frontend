@@ -2,6 +2,7 @@ import type { FC } from 'react'
 import { useMemo, useEffect, useRef } from 'react'
 import { Page } from '@/components/Page'
 import { GiftDrawer } from '@/components/gifts/GiftDrawer'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
 import { ProfileHeader } from '@/components/profile/ProfileHeader'
 import { ProfileCard } from '@/components/profile/ProfileCard'
@@ -125,7 +126,9 @@ export const IndexPage: FC = () => {
           </div>
         </div>
 
-        <GiftDrawer />
+        <ErrorBoundary>
+          <GiftDrawer />
+        </ErrorBoundary>
       </div>
     </Page>
   )

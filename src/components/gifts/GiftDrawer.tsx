@@ -10,7 +10,7 @@ import { useGiftStore, giftFields } from '@/stores/giftStore'
 import { useTranslation, getGiftFieldLabelKey } from '@/i18n'
 import { SearchDrawer } from '../search/SearchDrawer'
 import { useMutation, useQueryClient, useQuery, useQueries } from '@tanstack/react-query'
-import { getConstructorCollections, getConstructorModels, getConstructorCollectionAllSymbols } from '@/api/constructor'
+import { getConstructorCollections, getConstructorModels, getConstructorCollectionAllSymbols, type ConstructorSymbol } from '@/api/constructor'
 import { updateGiftCell, togglePinGift, getGrids, type Grid } from '@/api/gifts'
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
 import { Pin } from 'lucide-react'
@@ -140,9 +140,21 @@ export const GiftDrawer: FC = () => {
     enabled: legacyEnabled && !!giftName,
     staleTime: 1000 * 60 * 60 * 24,
   })
-  const freeformSymbols = useMemo(() => {
+  const freeformSymbols = useMemo((): ConstructorSymbol[] => {
     const d = freeformSymbolsQuery.data
-    return Array.isArray(d) ? d : []
+    if (!Array.isArray(d)) return []
+    return d.flatMap((item): ConstructorSymbol[] => {
+      if (typeof item === 'string') {
+        return item ? [{ symbol: item, gift_number: 0 }] : []
+      }
+      if (item && typeof item === 'object') {
+        const s = item as Record<string, unknown>
+        const symbol = typeof s.symbol === 'string' ? s.symbol : ''
+        if (!symbol) return []
+        return [{ symbol, gift_number: typeof s.gift_number === 'number' ? s.gift_number : 0 }]
+      }
+      return []
+    })
   }, [freeformSymbolsQuery.data])
 
   const giftTree = useMemo(() => ({}), [])
@@ -442,6 +454,7 @@ export const GiftDrawer: FC = () => {
         toast(t('common.error'), {
           description: is404 ? t('giftDrawer.errorCombinationNotFound') : t('toast.errorUpdateGift'),
         })
+        setEditingFieldKey(null)
       }
       return
     }

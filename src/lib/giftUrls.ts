@@ -10,8 +10,10 @@ const IMAGE_PROXY_SETTING_KEY = 'image-proxy-enabled'
 const normalizeApostrophe = (s: string): string => s.replace(/\u2019/g, "'")
 
 /** Сегмент пути для CDN: апостроф + слеш как обратный слеш (AC/DC → AC%5CDC) */
-const encodePathSegment = (s: string): string =>
-  encodeURIComponent(normalizeApostrophe(s).replace(/\//g, '\\')).replace(/'/g, '%27')
+const encodePathSegment = (s: string | null | undefined): string => {
+  if (!s) return ''
+  return encodeURIComponent(normalizeApostrophe(s).replace(/\//g, '\\')).replace(/'/g, '%27')
+}
 
 /**
  * Проверяет, включено ли проксирование изображений
@@ -46,7 +48,8 @@ export const buildGiftModelUrl = (giftName: string, model: string): string => {
   return proxyImageUrl(url)
 }
 
-export const buildGiftPatternUrl = (giftName: string, pattern: string): string => {
+export const buildGiftPatternUrl = (giftName: string | null | undefined, pattern: string | null | undefined): string => {
+  if (!giftName || !pattern) return ''
   const url = `https://cdn.changes.tg/gifts/patterns/${encodePathSegment(giftName)}/png/${encodePathSegment(pattern)}.png`
   return proxyImageUrl(url)
 }

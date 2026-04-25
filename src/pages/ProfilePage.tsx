@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/components/Page'
 import { GiftDrawer } from '@/components/gifts/GiftDrawer'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
 import { ProfileHeader } from '@/components/profile/ProfileHeader'
 import { ProfileCard } from '@/components/profile/ProfileCard'
@@ -118,7 +119,9 @@ export const ProfilePage: FC = () => {
           {t('footer.thanks')} <a href="https://t.me/giftchanges" className="text-primary">@giftchanges</a> {t('footer.and')} <a href="https://t.me/proTON_priTON" className="text-primary">@proTON_priTON</a> {t('footer.forApi')}
         </div>
 
-        <GiftDrawer />
+        <ErrorBoundary>
+          <GiftDrawer />
+        </ErrorBoundary>
       </div>
     </Page>
   )
