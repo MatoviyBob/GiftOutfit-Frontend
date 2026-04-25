@@ -157,13 +157,11 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
 
   const clearGridMutation = useMutation({
     mutationFn: async () => {
-      // Clear all non-empty cells in parallel
+      // Clear every cell regardless of current content (no null filter — avoids leaving stale cells)
       const promises: Promise<unknown>[] = []
       rows.forEach((row, rowIndex) => {
-        row.forEach((cell, cellIndex) => {
-          if (cell.gift !== null) {
-            promises.push(updateGiftCell(gridId, rowIndex, cellIndex, null))
-          }
+        row.forEach((_cell, cellIndex) => {
+          promises.push(updateGiftCell(gridId, rowIndex, cellIndex, null))
         })
       })
       await Promise.all(promises)

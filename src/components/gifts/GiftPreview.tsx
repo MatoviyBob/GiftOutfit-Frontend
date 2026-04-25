@@ -1,10 +1,11 @@
 import type { FC } from 'react'
-import { Trash } from 'lucide-react'
+import { Crown, Trash } from 'lucide-react'
 import type { Gift } from '@/types/gift'
 import { GiftAnimation } from './GiftAnimation'
 import { PatternBackground } from './PatternBackground'
 import { buildGiftPatternUrl, buildTelegramGiftUrl } from '@/lib/giftUrls'
 import { useTranslation } from '@/i18n'
+import { useGiftStore } from '@/stores/giftStore'
 
 type GiftPreviewProps = {
   gift: Gift | null | undefined
@@ -13,6 +14,9 @@ type GiftPreviewProps = {
 
 export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
   const { t } = useTranslation()
+  const equippedGift = useGiftStore((s) => s.equippedGift)
+  const equipGift = useGiftStore((s) => s.equipGift)
+
   if (!gift) return (
     <div className="relative min-h-[200px] text-white overflow-hidden bg-muted"></div>
   )
@@ -26,6 +30,9 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
   const hasPattern = !!gift.pattern
   const patternUrl = gift.pattern ? buildGiftPatternUrl(gift.name, gift.pattern) : null
   const telegramUrl = gift.url ?? (gift.id > 0 ? buildTelegramGiftUrl(gift.name, gift.id) : null)
+
+  const isOwnProfile = !!onDelete
+  const isEquipped = equippedGift?.id === gift.id && equippedGift?.name === gift.name
 
   return (
     <div
@@ -43,6 +50,25 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
             {t('giftPreview.openInTelegram')}
           </a>
         )}
+
+        {/* Wear/Unequip button — only on own profile, only for gifts with a model */}
+        {isOwnProfile && gift.model && (
+          <button
+            className={`flex h-9 w-13 items-center justify-center rounded-full backdrop-blur text-white z-20 relative active:scale-95 transition-all cursor-pointer ${
+              isEquipped
+                ? 'bg-yellow-400/40 ring-1 ring-yellow-400/70'
+                : 'bg-white/15'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation()
+              equipGift(gift)
+            }}
+            title={isEquipped ? t('giftDrawer.unWear') : t('giftDrawer.wear')}
+          >
+            <Crown className={`w-5 h-5 ${isEquipped ? 'text-yellow-300' : 'text-white'}`} />
+          </button>
+        )}
+
         {onDelete && (
           <button
             className="flex h-9 w-13 items-center justify-center rounded-full bg-white/15 backdrop-blur text-white z-20 relative active:scale-95 transition-transform cursor-pointer"
@@ -70,4 +96,3 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
     </div>
   )
 }
-

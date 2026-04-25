@@ -36,6 +36,16 @@ type GiftStore = {
     copiedGift: Gift | null
     copyGift: (gift: Gift | null) => void
     clearCopiedGift: () => void
+
+    /** Gift currently "worn" — displayed in profile header */
+    equippedGift: Gift | null
+    equipGift: (gift: Gift) => void
+    unequipGift: () => void
+}
+
+const EQUIPPED_KEY = 'equipped-gift'
+const loadEquipped = (): Gift | null => {
+  try { return JSON.parse(localStorage.getItem(EQUIPPED_KEY) || 'null') } catch { return null }
 }
 
 export const useGiftStore = create<GiftStore>((set, get) => ({
@@ -49,6 +59,20 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
     copiedGift: null,
     copyGift: (gift) => set({ copiedGift: gift }),
     clearCopiedGift: () => set({ copiedGift: null }),
+
+    equippedGift: loadEquipped(),
+    equipGift: (gift) => set((state) => {
+      const isSame = state.equippedGift?.id === gift.id &&
+                     state.equippedGift?.name === gift.name
+      const next = isSame ? null : gift
+      if (next) localStorage.setItem(EQUIPPED_KEY, JSON.stringify(next))
+      else localStorage.removeItem(EQUIPPED_KEY)
+      return { equippedGift: next }
+    }),
+    unequipGift: () => {
+      localStorage.removeItem(EQUIPPED_KEY)
+      set({ equippedGift: null })
+    },
   
     selectField: (key, value, extra, mode = 'constructor') => {
       const state = get()

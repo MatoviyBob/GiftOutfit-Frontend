@@ -96,6 +96,8 @@ export const en = {
     clearAlbumTitle: 'Clear this collection?',
     clearAlbumMessage: 'All gifts in this collection will be removed. This cannot be undone.',
     renameAlbum: 'Rename collection',
+    wear: 'Wear',
+    unWear: 'Unequip',
     errorCombinationNotFound: 'This combination was not found',
   },
   dialogs: {
