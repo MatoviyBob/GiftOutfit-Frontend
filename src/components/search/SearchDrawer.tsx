@@ -23,12 +23,16 @@ type Props = {
   onOpenChange: (open: boolean) => void
   title: string
   items: Item[]
+  /** Pass true while the item list is being fetched so a spinner is shown.
+   *  When false and items is empty an "no results" message is shown instead
+   *  of a spinner, preventing the infinite dark-screen issue. */
+  isLoading?: boolean
   handleSelect: (item: Item) => void
   query?: string
   onQueryChange?: (query: string) => void
 }
 
-export const SearchDrawer: FC<Props> = ({ open, onOpenChange, title, items, handleSelect, query: externalQuery, onQueryChange }) => {
+export const SearchDrawer: FC<Props> = ({ open, onOpenChange, title, items, isLoading = false, handleSelect, query: externalQuery, onQueryChange }) => {
   const { t } = useTranslation()
   const [internalQuery, setInternalQuery] = useState("");
   const query = externalQuery !== undefined ? externalQuery : internalQuery
@@ -78,9 +82,13 @@ export const SearchDrawer: FC<Props> = ({ open, onOpenChange, title, items, hand
           />
         </InputGroup>
 
-        {items.length == 0 ? (
+        {isLoading ? (
           <div className="w-full h-full flex justify-center items-center">
             <Spinner className="size-8" />
+          </div>
+        ) : items.length === 0 ? (
+          <div className="w-full h-full flex justify-center items-center">
+            <p className="text-sm text-muted-foreground">{t('search.noResults')}</p>
           </div>
         ) : (
           <div className="mt-4 overflow-y-auto space-y-2">

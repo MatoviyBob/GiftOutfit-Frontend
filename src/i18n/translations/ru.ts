@@ -122,6 +122,7 @@ export const ru = {
   },
   search: {
     placeholder: 'Поиск...',
+    noResults: 'Ничего не найдено',
   },
   profileTabs: {
     posts: 'Посты',

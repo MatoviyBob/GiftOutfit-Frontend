@@ -122,6 +122,7 @@ export const en = {
   },
   search: {
     placeholder: 'Search...',
+    noResults: 'No results found',
   },
   profileTabs: {
     posts: 'Posts',

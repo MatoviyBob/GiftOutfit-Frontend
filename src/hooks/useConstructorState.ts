@@ -102,7 +102,11 @@ export function useConstructorState({
   const isLoadingCollections = collectionsQuery.isLoading
   const isLoadingModels = modelsQuery.isLoading
   const isLoadingBackdrops = backdropsQuery.isLoading
-  const isLoadingSymbols = symbolsQuery.isLoading
+  // Use isPending (not just isLoading) so we also cover the brief window between
+  // enabled=true and fetchStatus='fetching', preventing the pattern button from
+  // becoming clickable before symbols have arrived.
+  const symbolsEnabled = enabled && !!collection && !!model && !!backdrop
+  const isLoadingSymbols = symbolsEnabled && symbolsQuery.isPending
 
   const error =
     collectionsQuery.error ??

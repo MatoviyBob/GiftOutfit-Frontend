@@ -422,6 +422,38 @@ export const GiftDrawer: FC = () => {
         ? freeformDrawerItems
         : drawerItems
 
+  // Reflects whether the data for the currently-edited field is still loading.
+  // Passed to SearchDrawer so it can show a spinner vs. an "empty" message.
+  const searchDrawerIsLoading = useMemo(() => {
+    if (!editingFieldKey) return false
+    if (isConstructorModeActive) {
+      if (editingFieldKey === 'gifts')      return constructorState.isLoadingCollections
+      if (editingFieldKey === 'model')      return constructorState.isLoadingModels
+      if (editingFieldKey === 'background') return constructorState.isLoadingBackdrops
+      if (editingFieldKey === 'pattern')    return constructorState.isLoadingSymbols
+    } else {
+      if (editingFieldKey === 'gifts')      return collectionsQuery.isLoading
+      if (editingFieldKey === 'model')      return freeformModelsQuery.isLoading
+      if (editingFieldKey === 'background') return freeformBackdropsAndSymbols.isLoadingBackdrops
+      // Cover the enabled→fetching idle gap the same way useConstructorState does
+      if (editingFieldKey === 'pattern')    return legacyEnabled && !!giftName && freeformSymbolsQuery.isPending
+    }
+    return false
+  }, [
+    editingFieldKey,
+    isConstructorModeActive,
+    constructorState.isLoadingCollections,
+    constructorState.isLoadingModels,
+    constructorState.isLoadingBackdrops,
+    constructorState.isLoadingSymbols,
+    collectionsQuery.isLoading,
+    freeformModelsQuery.isLoading,
+    freeformBackdropsAndSymbols.isLoadingBackdrops,
+    legacyEnabled,
+    giftName,
+    freeformSymbolsQuery.isPending,
+  ])
+
   const handleSelect = async (item: DrawerItem) => {
     if (!isOwnProfile) return
     if (!editingFieldKey) return
@@ -740,6 +772,7 @@ export const GiftDrawer: FC = () => {
                 ? a.title.localeCompare(b.title) || (Number(a.id) - Number(b.id))
                 : a.title.localeCompare(b.title)
             )}
+          isLoading={searchDrawerIsLoading}
           handleSelect={handleSelect}
         />
 
