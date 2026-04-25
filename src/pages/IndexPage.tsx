@@ -11,7 +11,7 @@ import { Settings, Share2 } from "lucide-react"
 import { Link } from 'react-router-dom';
 import { SubscriptionItem } from '@/components/subscription/SubscriptionItem'
 import { generateProfileShareLink } from '@/lib/shareProfile'
-import { trackProfileView, getUser, type TelegramUser } from '@/api/user'
+import { trackProfileView, getUser, getMySettings, type TelegramUser } from '@/api/user'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n'
 import { useQuery } from '@tanstack/react-query'
@@ -25,6 +25,7 @@ export const IndexPage: FC = () => {
   const hasTrackedView = useRef(false)
   const equipGift = useGiftStore((s) => s.equipGift)
   const unequipGift = useGiftStore((s) => s.unequipGift)
+  const setFavoritePalette = useGiftStore((s) => s.setFavoritePalette)
 
   // Загружаем данные пользователя с сервера для получения bio + equipped_gift
   const { data: user, isLoading: isLoadingUser } = useQuery<TelegramUser>({
@@ -33,18 +34,22 @@ export const IndexPage: FC = () => {
     enabled: !!telegramUser?.id,
   })
 
-  // Sync equipped_gift from GET /users/{id} response into the Zustand store.
-  // Only runs once per user load — we trust the local store after that.
-  const hasSyncedEquipped = useRef(false)
+  // Load settings from server once after user is known — sync to Zustand store.
+  // Uses a ref so we never re-apply server data over local changes the user just made.
+  const hasSyncedSettings = useRef(false)
   useEffect(() => {
-    if (!user || hasSyncedEquipped.current) return
-    hasSyncedEquipped.current = true
-    if (user.equipped_gift) {
-      equipGift(user.equipped_gift)
-    } else if (user.equipped_gift === null) {
-      unequipGift()
-    }
-  }, [user])
+    if (!telegramUser?.id || hasSyncedSettings.current) return
+    hasSyncedSettings.current = true
+    getMySettings()
+      .then((settings) => {
+        if (settings.equipped_gift) equipGift(settings.equipped_gift)
+        else if (settings.equipped_gift === null) unequipGift()
+        if (Array.isArray(settings.favorite_palette)) {
+          setFavoritePalette(settings.favorite_palette)
+        }
+      })
+      .catch(() => { /* keep localStorage values on network error */ })
+  }, [telegramUser?.id])
 
   // Отслеживаем просмотр своего профиля при загрузке
   useEffect(() => {

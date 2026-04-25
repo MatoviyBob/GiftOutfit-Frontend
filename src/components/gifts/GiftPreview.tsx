@@ -7,6 +7,7 @@ import { buildGiftPatternUrl, buildTelegramGiftUrl } from '@/lib/giftUrls'
 import { useTranslation } from '@/i18n'
 import { useGiftStore } from '@/stores/giftStore'
 import { updateEquippedGift, type TelegramUser } from '@/api/user'
+
 import { useQueryClient } from '@tanstack/react-query'
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
 
@@ -42,7 +43,7 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
 
   return (
     <div
-      className="relative min-h-[200px] text-white overflow-hidden bg-muted rounded-t-3xl"
+      className="relative min-h-[200px] text-white overflow-hidden bg-muted"
       style={backgroundStyle}
     >
       {hasPattern && patternUrl && <PatternBackground image={patternUrl} />}
@@ -65,31 +66,23 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
                 ? 'bg-yellow-400/30 border-yellow-400/60 text-yellow-300'
                 : 'bg-black/25 border-white/20 text-white'
             }`}
-            onClick={async (e) => {
+            onClick={(e) => {
               e.stopPropagation()
               const nextGift = isEquipped ? null : gift
 
-              // 1. Update Zustand store immediately (UI reacts instantly)
-              equipGift(gift) // toggles: equip if not equipped, unequip if equipped
+              // 1. Update Zustand store immediately (toggles equip/unequip)
+              equipGift(gift)
 
-              // 2. Optimistically update the ['user', userId] query cache
-              //    so that if/when the user query refetches, it carries the right value
+              // 2. Update query cache so re-fetches carry the right value
               if (userId) {
                 queryClient.setQueryData<TelegramUser>(['user', userId], (old) =>
                   old ? { ...old, equipped_gift: nextGift } : old
                 )
               }
 
-              // 3. Persist to server (fire-and-forget; store is already correct)
-              updateEquippedGift(nextGift).catch(() => {
-                // Rollback store and cache on failure
-                equipGift(gift) // toggle back
-                if (userId) {
-                  queryClient.setQueryData<TelegramUser>(['user', userId], (old) =>
-                    old ? { ...old, equipped_gift: isEquipped ? gift : null } : old
-                  )
-                }
-              })
+              // 3. Persist to server — fire-and-forget, no rollback.
+              //    Local store already has the correct state.
+              updateEquippedGift(nextGift)
             }}
             title={isEquipped ? t('giftDrawer.unWear') : t('giftDrawer.wear')}
           >
