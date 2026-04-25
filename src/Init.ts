@@ -35,11 +35,13 @@ export async function init(options: {
   initSDK();
 
   
-  // Add Eruda if needed.
-  // options.eruda && void import('eruda').then(({ default: eruda }) => {
-  //   eruda.init();
-  //   eruda.position({ x: window.innerWidth - 50, y: 0 });
-  // });
+  // Add Eruda for debugging on mobile (iOS/Android)
+  if (['ios', 'android'].includes(options.platform)) {
+    void import('eruda').then(({ default: eruda }) => {
+      eruda.init();
+      eruda.position({ x: window.innerWidth - 50, y: 0 });
+    });
+  }
   
   if (swipeBehavior.mount.isAvailable()) {
     swipeBehavior.mount();
