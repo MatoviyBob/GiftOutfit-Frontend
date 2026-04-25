@@ -42,7 +42,7 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
 
   return (
     <div
-      className="relative min-h-[200px] text-white overflow-hidden bg-muted"
+      className="relative min-h-[200px] text-white overflow-hidden bg-muted rounded-t-3xl"
       style={backgroundStyle}
     >
       {hasPattern && patternUrl && <PatternBackground image={patternUrl} />}
@@ -51,7 +51,7 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
         {telegramUrl && (
           <a
             href={telegramUrl}
-            className="mr-auto flex h-9 px-4 items-center justify-center rounded-full bg-white/15 backdrop-blur text-white z-20 relative active:scale-95 transition-transform cursor-pointer"
+            className="mr-auto flex h-9 px-4 items-center justify-center rounded-full bg-black/25 backdrop-blur-sm text-white z-20 relative active:scale-95 transition-transform cursor-pointer border border-white/20"
           >
             {t('giftPreview.openInTelegram')}
           </a>
@@ -60,10 +60,10 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
         {/* Wear/Unequip button — only on own profile, only for gifts with a model */}
         {isOwnProfile && gift.model && (
           <button
-            className={`flex h-9 w-13 items-center justify-center rounded-full backdrop-blur text-white z-20 relative active:scale-95 transition-all cursor-pointer ${
+            className={`flex h-9 w-11 items-center justify-center rounded-full backdrop-blur-sm border transition-all cursor-pointer z-20 relative active:scale-95 ${
               isEquipped
-                ? 'bg-yellow-400/40 ring-1 ring-yellow-400/70'
-                : 'bg-white/15'
+                ? 'bg-yellow-400/30 border-yellow-400/60 text-yellow-300'
+                : 'bg-black/25 border-white/20 text-white'
             }`}
             onClick={async (e) => {
               e.stopPropagation()
@@ -73,21 +73,24 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
               const nextGift = isEquipped ? null : gift
               try {
                 await updateEquippedGift(nextGift)
-                // Invalidate user cache so ProfileHeader updates
-                if (userId) queryClient.invalidateQueries({ queryKey: ['user', userId] })
+                // Invalidate user cache and settings cache so ProfileHeader updates
+                if (userId) {
+                  queryClient.invalidateQueries({ queryKey: ['user', userId] })
+                  queryClient.invalidateQueries({ queryKey: ['my-settings'] })
+                }
               } catch {
-                // Silent — localStorage already updated; server will sync on next load
+                // Silent — store already updated; server will sync on next load
               }
             }}
             title={isEquipped ? t('giftDrawer.unWear') : t('giftDrawer.wear')}
           >
-            <Crown className={`w-5 h-5 ${isEquipped ? 'text-yellow-300' : 'text-white'}`} />
+            <Crown className="w-5 h-5" />
           </button>
         )}
 
         {onDelete && (
           <button
-            className="flex h-9 w-13 items-center justify-center rounded-full bg-white/15 backdrop-blur text-white z-20 relative active:scale-95 transition-transform cursor-pointer"
+            className="flex h-9 w-11 items-center justify-center rounded-full bg-black/25 backdrop-blur-sm border border-white/20 text-white z-20 relative active:scale-95 transition-transform cursor-pointer"
             onClick={(e) => {
               e.stopPropagation()
               onDelete()

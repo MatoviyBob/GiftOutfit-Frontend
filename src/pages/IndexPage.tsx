@@ -12,7 +12,7 @@ import { Settings, Share2 } from "lucide-react"
 import { Link } from 'react-router-dom';
 import { SubscriptionItem } from '@/components/subscription/SubscriptionItem'
 import { generateProfileShareLink } from '@/lib/shareProfile'
-import { trackProfileView, getUser, type TelegramUser } from '@/api/user'
+import { trackProfileView, getUser, getMySettings, type TelegramUser } from '@/api/user'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n'
 import { useQuery } from '@tanstack/react-query'
@@ -34,16 +34,23 @@ export const IndexPage: FC = () => {
     enabled: !!telegramUser?.id,
   })
 
-  // Sync equipped_gift from server into the store (server is the source of truth)
+  // Load settings (equipped_gift + favorite_palette) from server
+  const { data: mySettings } = useQuery({
+    queryKey: ['my-settings'],
+    queryFn: getMySettings,
+    enabled: !!telegramUser?.id,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  // Sync equipped_gift from server settings into the Zustand store
   useEffect(() => {
-    if (!user) return
-    if (user.equipped_gift) {
-      equipGift(user.equipped_gift)
-    } else if (user.equipped_gift === null) {
+    if (!mySettings) return
+    if (mySettings.equipped_gift) {
+      equipGift(mySettings.equipped_gift)
+    } else if (mySettings.equipped_gift === null) {
       unequipGift()
     }
-    // If equipped_gift is undefined (field not returned yet), keep localStorage value
-  }, [user?.equipped_gift])
+  }, [mySettings?.equipped_gift])
 
   // Отслеживаем просмотр своего профиля при загрузке
   useEffect(() => {
@@ -102,30 +109,32 @@ export const IndexPage: FC = () => {
   // Используем данные с сервера, если они загружены, иначе данные из Telegram
   const displayUser = user || telegramUser
 
+  const topActions = (
+    <div className="flex items-center gap-2 w-full pt-2 pb-1">
+      <Button
+        size="lg"
+        variant="ghost"
+        aria-label={t('profile.shareProfile')}
+        className="ml-2 text-foreground/80 hover:text-foreground hover:bg-white/10"
+        onClick={handleShareProfile}
+      >
+        <Share2 className="size-5" />
+      </Button>
+      <Button size="lg" variant="ghost" aria-label={t('profile.settingsAria')} className="ml-auto mr-2 text-foreground/80 hover:text-foreground hover:bg-white/10">
+        <Link to="/settings">
+          <Settings className="size-5" />
+        </Link>
+      </Button>
+    </div>
+  )
+
   return (
     <Page back={false}>
       <div className="w-full">
 
-        <div className="flex items-center gap-2 mt-2">
-          <Button 
-            size="lg" 
-            variant="ghost" 
-            aria-label={t('profile.shareProfile')} 
-            className="ml-2"
-            onClick={handleShareProfile}
-          >
-            <Share2 className="size-5" />
-          </Button>
-          <Button size="lg" variant="ghost" aria-label={t('profile.settingsAria')} className="ml-auto mr-2">
-            <Link to="/settings">
-              <Settings className="size-5" />
-            </Link>
-          </Button>
-        </div>
+        <ProfileHeader user={displayUser} isOwnProfile={true} topActions={topActions} />
 
         <SubscriptionItem />
-
-        <ProfileHeader user={displayUser} isOwnProfile={true} />
 
         <ProfileCard user={displayUser} isOwnProfile={true} />
 

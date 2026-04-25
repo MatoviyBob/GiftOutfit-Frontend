@@ -1,4 +1,4 @@
-import type { FC } from 'react'
+import type { FC, ReactNode } from 'react'
 import { useMemo } from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { BadgeCheckIcon } from 'lucide-react'
@@ -18,6 +18,7 @@ import { useGiftStore } from '@/stores/giftStore'
 interface ProfileHeaderProps {
   user?: TelegramUser;
   isOwnProfile?: boolean;
+  topActions?: ReactNode;
 }
 
 /** Info about a pinned gift and its grid location, so we can open it in GiftDrawer */
@@ -41,7 +42,7 @@ const POSITION_RANGES = [
   { xMin: -115, xMax: -125, yMin: 20,  yMax: 60  },
 ]
 
-export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = false }) => {
+export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = false, topActions }) => {
   const { t } = useTranslation()
   const userName = user
     ? `${user.first_name}${user.last_name ? ` ${user.last_name}` : ''}`
@@ -158,11 +159,18 @@ export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = fal
 
   return (
     <div
-      className="relative flex flex-col items-center px-4 pt-6 pb-4 overflow-hidden transition-all duration-500"
+      className="relative flex flex-col items-center px-4 pb-4 overflow-hidden transition-all duration-500"
       style={wornBgStyle}
     >
       {/* Pattern overlay from worn gift */}
       {wornPatternUrl && <PatternBackground image={wornPatternUrl} />}
+
+      {/* Top action buttons (share, settings) — inside the background */}
+      {topActions && (
+        <div className="relative z-10 w-full">
+          {topActions}
+        </div>
+      )}
 
       {/* Avatar + floating pinned gifts */}
       <div className="relative flex justify-center items-center mb-4 w-full z-10">
