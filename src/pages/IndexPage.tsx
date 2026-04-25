@@ -7,7 +7,6 @@ import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
 import { ProfileHeader } from '@/components/profile/ProfileHeader'
 import { ProfileCard } from '@/components/profile/ProfileCard'
 import ProfileTabs from '@/components/profile/ProfileTabs'
-import { Button } from '@/components/ui/button'
 import { Settings, Share2 } from "lucide-react"
 import { Link } from 'react-router-dom';
 import { SubscriptionItem } from '@/components/subscription/SubscriptionItem'
@@ -110,21 +109,21 @@ export const IndexPage: FC = () => {
   const displayUser = user || telegramUser
 
   const topActions = (
-    <div className="flex items-center gap-2 w-full pt-2 pb-1">
-      <Button
-        size="lg"
-        variant="ghost"
+    <div className="flex items-center w-full pt-2 pb-1 px-2">
+      <button
         aria-label={t('profile.shareProfile')}
-        className="ml-2 text-foreground/80 hover:text-foreground hover:bg-white/10"
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-black/25 backdrop-blur-sm border border-white/20 text-white active:scale-95 transition-transform cursor-pointer"
         onClick={handleShareProfile}
       >
         <Share2 className="size-5" />
-      </Button>
-      <Button size="lg" variant="ghost" aria-label={t('profile.settingsAria')} className="ml-auto mr-2 text-foreground/80 hover:text-foreground hover:bg-white/10">
-        <Link to="/settings">
-          <Settings className="size-5" />
-        </Link>
-      </Button>
+      </button>
+      <Link
+        to="/settings"
+        aria-label={t('profile.settingsAria')}
+        className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-black/25 backdrop-blur-sm border border-white/20 text-white active:scale-95 transition-transform cursor-pointer"
+      >
+        <Settings className="size-5" />
+      </Link>
     </div>
   )
 
