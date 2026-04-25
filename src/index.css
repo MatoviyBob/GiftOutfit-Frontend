@@ -148,6 +148,17 @@
   }
 }
 
+@keyframes sparkle-appear {
+  0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+  50%       { transform: scale(1) rotate(45deg); opacity: 1; }
+}
+
+@layer utilities {
+  .text-shadow-sm {
+    text-shadow: 0 1px 4px rgba(0,0,0,0.55), 0 0 8px rgba(0,0,0,0.35);
+  }
+}
+
 @keyframes tab-shake {
   0%, 100% { transform: rotate(0deg); }
   20% { transform: rotate(-2deg); }

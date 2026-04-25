@@ -17,19 +17,33 @@ import { toast } from 'sonner'
 import { useTranslation } from '@/i18n'
 import { useQuery } from '@tanstack/react-query'
 import { Spinner } from '@/components/ui/spinner'
+import { useGiftStore } from '@/stores/giftStore'
 
 export const IndexPage: FC = () => {
   const { t } = useTranslation()
   const lp = useMemo(() => retrieveLaunchParams(), []);
   const telegramUser = lp.tgWebAppData?.user
   const hasTrackedView = useRef(false)
+  const equipGift = useGiftStore((s) => s.equipGift)
+  const unequipGift = useGiftStore((s) => s.unequipGift)
 
-  // Загружаем данные пользователя с сервера для получения bio
+  // Загружаем данные пользователя с сервера для получения bio + equipped_gift
   const { data: user, isLoading: isLoadingUser } = useQuery<TelegramUser>({
     queryKey: ['user', telegramUser?.id],
     queryFn: () => getUser(telegramUser!.id),
     enabled: !!telegramUser?.id,
   })
+
+  // Sync equipped_gift from server into the store (server is the source of truth)
+  useEffect(() => {
+    if (!user) return
+    if (user.equipped_gift) {
+      equipGift(user.equipped_gift)
+    } else if (user.equipped_gift === null) {
+      unequipGift()
+    }
+    // If equipped_gift is undefined (field not returned yet), keep localStorage value
+  }, [user?.equipped_gift])
 
   // Отслеживаем просмотр своего профиля при загрузке
   useEffect(() => {
