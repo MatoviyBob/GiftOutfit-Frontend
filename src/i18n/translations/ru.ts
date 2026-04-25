@@ -96,6 +96,8 @@ export const ru = {
     clearAlbumTitle: 'Очистить коллекцию?',
     clearAlbumMessage: 'Все подарки в коллекции будут удалены. Это действие нельзя отменить.',
     renameAlbum: 'Переименовать коллекцию',
+    wear: 'Надеть',
+    unWear: 'Снять',
     errorCombinationNotFound: 'Такая комбинация не найдена',
   },
   dialogs: {

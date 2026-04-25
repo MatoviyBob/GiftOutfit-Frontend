@@ -16,6 +16,7 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -202,38 +203,41 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
     },
   })
 
-  // ── Right-click drag-to-scroll (desktop) ──────────────────────────────────
+  // ── Left-click drag-to-scroll (desktop) ───────────────────────────────────
   const scrollRef = useRef<HTMLDivElement>(null)
+  const isDraggingScroll = useRef(false)
 
   const handleScrollMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    // Right mouse button only
-    if (e.button !== 2) return
-    e.preventDefault()
+    // Left mouse button only; don't interfere when in edit mode (DnD handles it)
+    if (e.button !== 0 || isEditMode) return
 
     const startX = e.clientX
     const startScrollLeft = scrollRef.current?.scrollLeft ?? 0
+    isDraggingScroll.current = false
 
     const onMouseMove = (mv: MouseEvent) => {
-      if (!scrollRef.current) return
-      scrollRef.current.scrollLeft = startScrollLeft - (mv.clientX - startX)
+      const dx = mv.clientX - startX
+      if (Math.abs(dx) > 4) {
+        isDraggingScroll.current = true
+        if (scrollRef.current) scrollRef.current.scrollLeft = startScrollLeft - dx
+      }
     }
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
+      // Keep isDraggingScroll true briefly so the click handler can read it
+      setTimeout(() => { isDraggingScroll.current = false }, 50)
     }
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
-  }, [])
+  }, [isEditMode])
 
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()  // suppress browser right-click menu during drag
-  }, [])
-
-  // ── Drag-and-drop for tabs (only active in edit mode) ─────────────────────
-  // Using a very large distance so it only activates via the dnd listeners when edit mode is on.
-  // When isEditMode=false the sortable `disabled` flag stops DnD from ever starting.
+  // ── Drag-and-drop for tabs ─────────────────────────────────────────────────
+  // Items are `disabled` when !isEditMode, so sensors don't interfere with
+  // normal touch-scroll even though both PointerSensor and TouchSensor are active.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -297,9 +301,16 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
           <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
             <div
               ref={scrollRef}
-              className="relative w-full overflow-x-auto scrollbar-hide"
+              className="relative w-full overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing"
               onMouseDown={handleScrollMouseDown}
-              onContextMenu={handleContextMenu}
+              onClickCapture={(e) => {
+                // If the user was scrolling (dragged > 4px), swallow the click
+                // so the tab under the cursor doesn't switch
+                if (isDraggingScroll.current) {
+                  e.stopPropagation()
+                  e.preventDefault()
+                }
+              }}
             >
               <TabsList className="inline-flex gap-x-2 p-0 px-4 w-max min-w-full justify-center">
                 {orderedGrids.map((grid, index) => (

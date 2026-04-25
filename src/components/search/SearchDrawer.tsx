@@ -7,6 +7,7 @@ import { InputGroup, InputGroupAddon } from "../ui/input-group";
 import { Search } from "lucide-react";
 import { ProxiedImage } from "@/components/ui/ProxiedImage"
 import { useTranslation } from '@/i18n'
+import { useFavoritePalette } from '@/hooks/useFavoritePalette'
 
 type Item = {
   id: string
@@ -34,6 +35,7 @@ type Props = {
 
 export const SearchDrawer: FC<Props> = ({ open, onOpenChange, title, items, isLoading = false, handleSelect, query: externalQuery, onQueryChange }) => {
   const { t } = useTranslation()
+  const { isFavorite } = useFavoritePalette()
   const [internalQuery, setInternalQuery] = useState("");
   const query = externalQuery !== undefined ? externalQuery : internalQuery
   
@@ -95,7 +97,11 @@ export const SearchDrawer: FC<Props> = ({ open, onOpenChange, title, items, isLo
             {filtered.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center gap-3 p-3 bg-card rounded-2xl border border-border active:scale-95 transition-transform"
+                className={`flex items-center gap-3 p-3 bg-card rounded-2xl border active:scale-95 transition-transform ${
+                  item.background && isFavorite(item.title)
+                    ? 'border-blue-500/60 ring-1 ring-blue-500/40'
+                    : 'border-border'
+                }`}
                 onClick={() => handleSelect(item)}
               >
                 {item.image && <ProxiedImage width={44} height={44} src={item.image} />}

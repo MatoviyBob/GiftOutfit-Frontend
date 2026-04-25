@@ -1,5 +1,5 @@
 import Lottie from 'lottie-react'
-import { useEffect, type FC } from 'react'
+import { useEffect, useRef, useState, type FC } from 'react'
 import type { Gift } from '@/types/gift'
 import { getLottieURL } from '@/types/gift'
 import { useQuery } from '@tanstack/react-query'
@@ -15,41 +15,47 @@ type GiftAnimationProps = {
 export const GiftAnimation: FC<GiftAnimationProps> = ({ gift, className, autoplay }) => {
     const lottieURL = getLottieURL(gift)
     const api = useApi()
-    
+    // Incrementing this key causes Lottie to remount → replay from the start
+    const [replayKey, setReplayKey] = useState(0)
+    const completedRef = useRef(false)
+
     const { data: animationData } = useQuery({
         queryKey: ['lottie', lottieURL],
         enabled: !!lottieURL,
         queryFn: async () => {
             if (!lottieURL) throw new Error('Lottie URL is not available')
-            
-            // Всегда используем прокси для Lottie файлов
             const proxiedUrl = proxyLottieUrl(lottieURL)
-            
-            // Извлекаем путь из полного URL для использования с apiClient
             const url = new URL(proxiedUrl)
             const path = url.pathname + url.search
-
             const res = await api.get(path)
             return res.data
         },
-        staleTime: Infinity, // кеш всегда свежий
-        // cacheTime: Infinity, // не удалять из кеша
+        staleTime: Infinity,
         retry: 1,
     })
 
+    // Reset completion flag whenever animation data or replayKey changes
     useEffect(() => {
-        
-    }, [animationData])
+        completedRef.current = false
+    }, [animationData, replayKey])
 
     if (!animationData) return <span className={className}></span>
 
     return (
         <Lottie
+            key={replayKey}
             animationData={animationData}
             loop={false}
-            className={className}
+            className={`${className} cursor-pointer`}
             autoPlay={autoplay}
             initialSegment={(autoplay == false && [1, 1] || undefined)}
+            onComplete={() => { completedRef.current = true }}
+            onClick={() => {
+                // Only replay after the animation has finished at least once
+                if (completedRef.current) {
+                    setReplayKey(k => k + 1)
+                }
+            }}
         />
     )
 }
