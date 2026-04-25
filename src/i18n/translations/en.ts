@@ -45,6 +45,8 @@ export const en = {
     subscription: 'Subscription',
     contactSupport: 'Contact Support',
     telegramChannel: 'Telegram Channel',
+    favoritePalette: 'Favorite palette',
+    favoritePaletteDesc: 'Choose up to 3 favorite background colors. They will appear at the top of the background list.',
     development: 'Development',
     imageProxy: 'Image Proxy',
     language: 'Language',

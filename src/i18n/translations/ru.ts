@@ -45,6 +45,8 @@ export const ru = {
     subscription: 'Подписка',
     contactSupport: 'Связаться с поддержкой',
     telegramChannel: 'Канал Telegram',
+    favoritePalette: 'Любимая палитра',
+    favoritePaletteDesc: 'Выберите до 3 любимых цветов фона. Они будут отображаться в начале списка фонов.',
     development: 'Разработка',
     imageProxy: 'Прокси изображений',
     language: 'Язык',
