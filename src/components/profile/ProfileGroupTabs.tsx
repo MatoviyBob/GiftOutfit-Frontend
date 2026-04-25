@@ -3,7 +3,7 @@ import { GiftGrid } from '../gifts/GiftGrid'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getGrids, reorderGrids, type Grid } from '@/api/gifts';
 import { Spinner } from '../ui/spinner';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { AddAlbumDialog } from '../gifts/AddAlbumDialog';
 import { RenameAlbumDialog } from '../gifts/RenameAlbumDialog';
 import { useHasActiveSubscription } from '@/hooks/useSubscription';
@@ -16,7 +16,6 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
-  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -45,9 +44,21 @@ type SortableTabProps = {
   isActive: boolean
   onSelect: () => void
   onPencilClick: () => void
+  onLongPress: () => void   // called when long-press fires
 }
 
-const SortableTab = ({ grid, isMain, isEditMode, isActive, onSelect, onPencilClick }: SortableTabProps) => {
+const LONG_PRESS_MS = 600
+const LONG_PRESS_MOVE_THRESHOLD = 8 // px — abort if finger moved this much
+
+const SortableTab = ({
+  grid,
+  isMain,
+  isEditMode,
+  isActive,
+  onSelect,
+  onPencilClick,
+  onLongPress,
+}: SortableTabProps) => {
   const {
     attributes,
     listeners,
@@ -57,6 +68,7 @@ const SortableTab = ({ grid, isMain, isEditMode, isActive, onSelect, onPencilCli
     isDragging,
   } = useSortable({
     id: grid.id,
+    // Only draggable when edit mode is active and not main
     disabled: isMain || !isEditMode,
   });
 
@@ -66,28 +78,81 @@ const SortableTab = ({ grid, isMain, isEditMode, isActive, onSelect, onPencilCli
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // ── Long-press detection (per-tab, so overlay is NOT needed) ──────────────
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const startPosRef = useRef<{ x: number; y: number } | null>(null)
+  const firedRef = useRef(false)
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    firedRef.current = false
+    startPosRef.current = null
+  }
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    // Only primary button (finger / left mouse) starts long-press
+    if (e.button !== 0 && e.pointerType !== 'touch') return
+    if (isMain || isEditMode) return   // Main can't be edited; edit mode already active
+
+    startPosRef.current = { x: e.clientX, y: e.clientY }
+    firedRef.current = false
+    timerRef.current = setTimeout(() => {
+      firedRef.current = true
+      timerRef.current = null
+      onLongPress()
+    }, LONG_PRESS_MS)
+  }, [isMain, isEditMode, onLongPress])
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!startPosRef.current || !timerRef.current) return
+    const dx = Math.abs(e.clientX - startPosRef.current.x)
+    const dy = Math.abs(e.clientY - startPosRef.current.y)
+    if (dx > LONG_PRESS_MOVE_THRESHOLD || dy > LONG_PRESS_MOVE_THRESHOLD) {
+      clearTimer()
+    }
+  }, [])
+
+  const handlePointerUp = useCallback(() => {
+    if (timerRef.current) clearTimer()
+  }, [])
+
+  // Cleanup on unmount
+  useEffect(() => () => clearTimer(), [])
+
   return (
     <div
       ref={setNodeRef}
       style={style}
+      // DnD listeners only injected when edit mode is active (prevents touch-scroll interference)
       {...(isEditMode && !isMain ? { ...attributes, ...listeners } : {})}
-      className="relative flex items-center shrink-0 touch-none"
+      className="relative flex items-center shrink-0"
+      // Long-press handlers sit on the wrapper div, NOT interfering with DnD
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
       <TabsTrigger
         value={String(grid.id)}
+        // In edit mode prevent tab-switch; clicks only used for exit (handled by Tabs onValueChange)
         onClick={isEditMode ? (e) => { e.preventDefault(); e.stopPropagation() } : onSelect}
         className={`px-3 !grow-0 whitespace-nowrap bg-transparent !data-[state=active]:bg-card dark:!data-[state=active]:bg-card rounded-full border-0 border-transparent data-[state=active]:border-primary !shadow-none !data-[state=active]:shadow-none shrink-0 text-muted-foreground data-[state=active]:text-foreground h-auto disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer select-none ${
           isEditMode && !isMain ? 'animate-tab-shake' : ''
-        } ${isActive ? 'text-foreground' : ''}`}
+        } ${isActive && !isEditMode ? 'text-foreground' : ''}`}
       >
         <span>{grid.name}</span>
       </TabsTrigger>
 
-      {/* Pencil icon — edit mode only, non-main tabs */}
+      {/* Pencil badge — edit mode only, non-main tabs */}
       {isEditMode && !isMain && (
         <button
           className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center z-10 cursor-pointer"
-          onPointerDown={(e) => { e.stopPropagation() }}
+          // Stop the DnD listeners from capturing this pointer down
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onPencilClick() }}
         >
           <Pencil className="w-2.5 h-2.5 text-white" />
@@ -107,7 +172,10 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: grids = [], isLoading } = useQuery({ queryKey: ['grids', user.id], queryFn: () => getGrids(user.id) });
+  const { data: grids = [], isLoading } = useQuery({
+    queryKey: ['grids', user.id],
+    queryFn: () => getGrids(user.id),
+  });
   const hasActiveSubscription = useHasActiveSubscription();
 
   // Local order for optimistic drag reorder
@@ -117,54 +185,55 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
     ? localOrder.map(id => grids.find(g => g.id === id)).filter(Boolean) as Grid[]
     : grids
 
-  // Sync localOrder when grids change (e.g. after invalidation)
-  const prevGridIds = useRef<string>('')
-  const gridIds = grids.map(g => g.id).join(',')
-  if (gridIds !== prevGridIds.current) {
-    prevGridIds.current = gridIds
-    setLocalOrder(null)
+  // Reset localOrder when server data changes (new grid added, etc.)
+  const gridIdsKey = grids.map(g => g.id).join(',')
+  const prevGridIdsKey = useRef('')
+  if (gridIdsKey !== prevGridIdsKey.current) {
+    prevGridIdsKey.current = gridIdsKey
+    if (localOrder !== null) setLocalOrder(null)
   }
 
   const reorderMutation = useMutation({
     mutationFn: (ids: number[]) => reorderGrids(ids),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['grids', user.id] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['grids', user.id] }),
     onError: () => {
       setLocalOrder(null)
       toast(t('common.error'), { description: t('toast.errorReorderAlbum') })
     },
   })
 
-  // ── Long-press detection ───────────────────────────────────────────────────
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const startLongPress = useCallback(() => {
-    if (!isOwnProfile) return
-    longPressTimer.current = setTimeout(() => {
-      setIsEditMode(true)
-    }, 500)
-  }, [isOwnProfile])
-
-  const cancelLongPress = useCallback(() => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current)
-  }, [])
-
-  // ── Tab scroll with mouse wheel (desktop) ─────────────────────────────────
+  // ── Right-click drag-to-scroll (desktop) ──────────────────────────────────
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
-    if (!scrollRef.current) return
-    // If the scroll is more vertical-ish, let it propagate; otherwise hijack
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
+  const handleScrollMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    // Right mouse button only
+    if (e.button !== 2) return
     e.preventDefault()
-    scrollRef.current.scrollLeft += e.deltaY
+
+    const startX = e.clientX
+    const startScrollLeft = scrollRef.current?.scrollLeft ?? 0
+
+    const onMouseMove = (mv: MouseEvent) => {
+      if (!scrollRef.current) return
+      scrollRef.current.scrollLeft = startScrollLeft - (mv.clientX - startX)
+    }
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
   }, [])
 
-  // ── Drag-and-drop for tabs ─────────────────────────────────────────────────
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()  // suppress browser right-click menu during drag
+  }, [])
+
+  // ── Drag-and-drop for tabs (only active in edit mode) ─────────────────────
+  // Using a very large distance so it only activates via the dnd listeners when edit mode is on.
+  // When isEditMode=false the sortable `disabled` flag stops DnD from ever starting.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -175,7 +244,7 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
     const oldIndex = currentIds.indexOf(active.id as number)
     const newIndex = currentIds.indexOf(over.id as number)
 
-    // Main album (index 0) can't be displaced
+    // Main album stays first
     if (newIndex === 0) return
 
     const newOrder = arrayMove(currentIds, oldIndex, newIndex)
@@ -186,6 +255,7 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
   // ── Tab change ─────────────────────────────────────────────────────────────
   const handleTabChange = (value: string) => {
     if (isEditMode) {
+      // Any tab tap in edit mode exits it (unless caught by SortableTab's onClick)
       setIsEditMode(false)
       return
     }
@@ -194,7 +264,7 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
     } else {
       if (!hasActiveSubscription) {
         navigate('/subscription')
-        return;
+        return
       }
       setIsDialogOpen(true)
       setActiveTab(activeTab)
@@ -213,19 +283,11 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
 
   return (
     <>
-      {/* Overlay to exit edit mode by tapping outside */}
-      {isEditMode && (
-        <div
-          className="fixed inset-0 z-10"
-          onClick={() => setIsEditMode(false)}
-        />
-      )}
-
       <Tabs
         defaultValue={String(grids[0]?.id)}
         value={activeTab}
         onValueChange={handleTabChange}
-        className="w-full overflow-x-hidden relative z-20"
+        className="w-full overflow-x-hidden relative"
       >
         <DndContext
           sensors={sensors}
@@ -236,7 +298,8 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
             <div
               ref={scrollRef}
               className="relative w-full overflow-x-auto scrollbar-hide"
-              onWheel={handleWheel}
+              onMouseDown={handleScrollMouseDown}
+              onContextMenu={handleContextMenu}
             >
               <TabsList className="inline-flex gap-x-2 p-0 px-4 w-max min-w-full justify-center">
                 {orderedGrids.map((grid, index) => (
@@ -248,18 +311,15 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
                     isActive={activeTab === String(grid.id) || (!activeTab && index === 0)}
                     onSelect={() => setActiveTab(String(grid.id))}
                     onPencilClick={() => setRenameTarget({ id: grid.id, name: grid.name })}
+                    onLongPress={() => setIsEditMode(true)}
                   />
                 ))}
 
-                {/* Add Album button */}
                 {isOwnProfile && !isEditMode && (
                   <TabsTrigger
                     key="add_album"
                     value="add_album"
                     onClick={() => { return }}
-                    onPointerDown={startLongPress}
-                    onPointerUp={cancelLongPress}
-                    onPointerLeave={cancelLongPress}
                     className="px-3 !grow-0 whitespace-nowrap bg-transparent !data-[state=active]:bg-muted dark:!data-[state=active]:bg-muted rounded-full border-0 border-transparent !shadow-none !data-[state=active]:shadow-none shrink-0 text-muted-foreground h-auto cursor-pointer"
                   >
                     + {t('dialogs.addAlbum')}
@@ -269,16 +329,6 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
             </div>
           </SortableContext>
         </DndContext>
-
-        {/* Hidden long-press listener on the whole tab bar */}
-        {isOwnProfile && grids.length > 1 && !isEditMode && (
-          <div
-            className="absolute inset-0 z-[-1]"
-            onPointerDown={startLongPress}
-            onPointerUp={cancelLongPress}
-            onPointerLeave={cancelLongPress}
-          />
-        )}
 
         {/* Gifts Content */}
         {orderedGrids.map((grid, index) => {
