@@ -8,7 +8,7 @@ import type { Gift } from '@/types/gift';
 import { Button } from '../ui/button';
 import { useGiftStore } from '@/stores/giftStore';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { addRow, deleteLastRow, deleteGrid, swapGiftCells, type Grid, type Cell } from '@/api/gifts';
+import { addRow, deleteLastRow, deleteGrid, swapGiftCells, updateGiftCell, type Grid, type Cell } from '@/api/gifts';
 import {
   DndContext,
   closestCenter,
@@ -151,6 +151,32 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
     onError: () => {
       toast(t('common.error'), {
         description: t('toast.errorDeleteAlbum'),
+      })
+    },
+  })
+
+  const clearGridMutation = useMutation({
+    mutationFn: async () => {
+      // Clear all non-empty cells in parallel
+      const promises: Promise<unknown>[] = []
+      rows.forEach((row, rowIndex) => {
+        row.forEach((cell, cellIndex) => {
+          if (cell.gift !== null) {
+            promises.push(updateGiftCell(gridId, rowIndex, cellIndex, null))
+          }
+        })
+      })
+      await Promise.all(promises)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['grids', userId] })
+      toast(t('toast.albumCleared'), {
+        description: t('toast.albumClearedDesc'),
+      })
+    },
+    onError: () => {
+      toast(t('common.error'), {
+        description: t('toast.errorClearAlbum'),
       })
     },
   })
@@ -317,12 +343,27 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
       title: t('giftDrawer.deleteAlbumTitle'),
       message: t('giftDrawer.deleteAlbumMessage'),
       buttons: [
-        { id: "delete", type: "ok" },
+        { id: "delete", type: "destructive", text: t('giftDrawer.deleteAlbum') },
         { id: "cancel", type: "cancel" }
       ]
     }).then((buttonId) => {
       if (buttonId == "delete") {
         deleteGridMutation.mutate()
+      }
+    })
+  }
+
+  const openClearPopup = () => {
+    popup.show({
+      title: t('giftDrawer.clearAlbumTitle'),
+      message: t('giftDrawer.clearAlbumMessage'),
+      buttons: [
+        { id: "clear", type: "destructive", text: t('giftDrawer.clearAlbum') },
+        { id: "cancel", type: "cancel" }
+      ]
+    }).then((buttonId) => {
+      if (buttonId == "clear") {
+        clearGridMutation.mutate()
       }
     })
   }
@@ -402,9 +443,19 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
           </Button>
 
           <Button
-            variant="ghost"
-            className="mt-2 h-11 w-full rounded-full cursor-pointer text-white font-semibold"
+            size="default"
+            className="mt-2 h-11 w-full rounded-full bg-card text-destructive font-semibold cursor-pointer hover:bg-card/80"
+            onClick={openClearPopup}
+            disabled={clearGridMutation.isPending}
+          >
+            {clearGridMutation.isPending ? t('giftDrawer.removing') : t('giftDrawer.clearAlbum')}
+          </Button>
+
+          <Button
+            size="default"
+            className="mt-2 h-11 w-full rounded-full bg-destructive/15 text-destructive font-semibold cursor-pointer hover:bg-destructive/25"
             onClick={openPopup}
+            disabled={deleteGridMutation.isPending}
           >
             {t('giftDrawer.deleteAlbum')}
           </Button>

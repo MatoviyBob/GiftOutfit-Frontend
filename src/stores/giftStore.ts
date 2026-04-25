@@ -31,6 +31,11 @@ type GiftStore = {
     setEditingFieldKey: (key: string | null) => void
 
     selectField: (key: string, value: string, extra?: unknown, mode?: 'constructor' | 'freeform') => void
+
+    /** Gift currently in clipboard for copy/paste */
+    copiedGift: Gift | null
+    copyGift: (gift: Gift | null) => void
+    clearCopiedGift: () => void
 }
 
 export const useGiftStore = create<GiftStore>((set, get) => ({
@@ -40,6 +45,10 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
 
     editingFieldKey: null,
     setEditingFieldKey: (key) => set(() => ({ editingFieldKey: key })),
+
+    copiedGift: null,
+    copyGift: (gift) => set({ copiedGift: gift }),
+    clearCopiedGift: () => set({ copiedGift: null }),
   
     selectField: (key, value, extra, mode = 'constructor') => {
       const state = get()
