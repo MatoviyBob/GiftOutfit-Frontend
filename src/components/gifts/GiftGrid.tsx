@@ -157,16 +157,11 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
 
   const clearGridMutation = useMutation({
     mutationFn: async () => {
-      // Step 1: Clear all cells in the first 3 rows in parallel
-      const clearPromises: Promise<unknown>[] = []
       for (let rowIndex = 0; rowIndex < Math.min(rows.length, 3); rowIndex++) {
         for (let cellIndex = 0; cellIndex < 3; cellIndex++) {
-          clearPromises.push(updateGiftCell(gridId, rowIndex, cellIndex, null))
+          await updateGiftCell(gridId, rowIndex, cellIndex, null)
         }
       }
-      await Promise.all(clearPromises)
-
-      // Step 2: Delete extra rows beyond the first 3 (sequentially, last-first)
       const extraRows = rows.length - 3
       for (let i = 0; i < extraRows; i++) {
         await deleteLastRow(gridId)
