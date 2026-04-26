@@ -140,8 +140,6 @@ export const IndexPage: FC = () => {
 
         <ProfileHeader user={displayUser} isOwnProfile={true} topActions={topActions} />
 
-        <div className="mt-6" />
-
         <SubscriptionItem />
 
         <ProfileCard user={displayUser} isOwnProfile={true} />

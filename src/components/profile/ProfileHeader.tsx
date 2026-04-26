@@ -159,10 +159,13 @@ export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = fal
 
   return (
     <div
-      className="relative flex flex-col items-center px-4 pb-4 overflow-hidden transition-all duration-500"
+      className="relative flex flex-col items-center px-4 pb-8 overflow-hidden transition-all duration-500"
       style={wornBgStyle}
     >
       {wornPatternUrl && <PatternBackground image={wornPatternUrl} />}
+
+      {/* Fade-out overlay: 20px gradient from theme background (bottom) to transparent (top) */}
+      <div className="absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-background to-transparent pointer-events-none z-10" />
 
       {/* Top action buttons (share, settings) — inside the background */}
       {topActions && (
