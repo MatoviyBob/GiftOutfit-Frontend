@@ -1,5 +1,5 @@
-import Lottie from 'lottie-react'
-import { useEffect, useRef, useState, type FC } from 'react'
+import Lottie, { type LottieRefCurrentProps } from 'lottie-react'
+import { useEffect, useRef, type FC } from 'react'
 import type { Gift } from '@/types/gift'
 import { getLottieURL } from '@/types/gift'
 import { useQuery } from '@tanstack/react-query'
@@ -15,8 +15,7 @@ type GiftAnimationProps = {
 export const GiftAnimation: FC<GiftAnimationProps> = ({ gift, className, autoplay }) => {
     const lottieURL = getLottieURL(gift)
     const api = useApi()
-    // Incrementing this key causes Lottie to remount → replay from the start
-    const [replayKey, setReplayKey] = useState(0)
+    const lottieRef = useRef<LottieRefCurrentProps>(null)
     const completedRef = useRef(false)
 
     const { data: animationData } = useQuery({
@@ -34,26 +33,28 @@ export const GiftAnimation: FC<GiftAnimationProps> = ({ gift, className, autopla
         retry: 1,
     })
 
-    // Reset completion flag whenever animation data or replayKey changes
+    // Reset completion flag whenever animation data changes
     useEffect(() => {
         completedRef.current = false
-    }, [animationData, replayKey])
+    }, [animationData])
 
     if (!animationData) return <span className={className}></span>
 
     return (
         <Lottie
-            key={replayKey}
+            lottieRef={lottieRef}
             animationData={animationData}
             loop={false}
+            renderer="canvas"
             className={`${className} cursor-pointer`}
             autoPlay={autoplay}
-            initialSegment={(autoplay == false && [1, 1] || undefined)}
+            initialSegment={autoplay === false ? [1, 1] : undefined}
             onComplete={() => { completedRef.current = true }}
             onClick={() => {
-                // Only replay after the animation has finished at least once
+                // Restart without remounting — much faster than key increment
                 if (completedRef.current) {
-                    setReplayKey(k => k + 1)
+                    completedRef.current = false
+                    lottieRef.current?.goToAndPlay(0)
                 }
             }}
         />

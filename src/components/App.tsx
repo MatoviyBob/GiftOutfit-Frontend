@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useSignal, isMiniAppDark, retrieveLaunchParams } from '@telegram-apps/sdk-react'
 import { Layout } from './Layout'
@@ -64,10 +64,12 @@ function AppRoutes() {
   
 
   return (
-    <Routes>
-      {routes.map((route) => <Route key={route.path} {...route} />)}
-      <Route path="*" element={<Navigate to="/portfolio" replace />}/>
-    </Routes>
+    <Suspense fallback={null}>
+      <Routes>
+        {routes.map((route) => <Route key={route.path} {...route} />)}
+        <Route path="*" element={<Navigate to="/portfolio" replace />}/>
+      </Routes>
+    </Suspense>
   );
 }
 

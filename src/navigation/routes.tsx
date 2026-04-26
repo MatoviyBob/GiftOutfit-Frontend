@@ -1,10 +1,11 @@
+import { lazy } from 'react'
 import type { ComponentType, JSX } from 'react'
 
-import { IndexPage } from '@/pages/IndexPage'
-import { ExplorePage } from '@/pages/Explore/ExplorePage'
-import { SettingsPage } from '@/pages/SettingsPage';
-import { SubscriptionPage } from '@/pages/SubscriptionPage';
-import { ProfilePage } from '@/pages/ProfilePage';
+const IndexPage = lazy(() => import('@/pages/IndexPage').then(m => ({ default: m.IndexPage })))
+const ExplorePage = lazy(() => import('@/pages/Explore/ExplorePage').then(m => ({ default: m.ExplorePage })))
+const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const SubscriptionPage = lazy(() => import('@/pages/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })))
+const ProfilePage = lazy(() => import('@/pages/ProfilePage').then(m => ({ default: m.ProfilePage })))
 
 interface Route {
   path: string;
@@ -14,7 +15,6 @@ interface Route {
 }
 
 export const routes: Route[] = [
-  // { path: '/', Component: IndexPage, title: 'Home Page' },
   { path: '/explore', Component: ExplorePage, title: 'Explore Page' },
   { path: '/portfolio', Component: IndexPage, title: 'Portfolio' },
   { path: '/profile/:userId', Component: ProfilePage, title: 'Profile' },
