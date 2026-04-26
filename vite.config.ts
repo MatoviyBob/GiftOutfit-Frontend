@@ -7,7 +7,7 @@ import mkcert from 'vite-plugin-mkcert';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss(), mkcert(),],
-  base: '/crybaby-gifts-mini-app/', // for github pages
+  base: '/GiftOutfit-Frontend/', // for github pages
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
