@@ -5,10 +5,9 @@ import { GiftAnimation } from './GiftAnimation'
 import { PatternBackground } from './PatternBackground'
 import { buildGiftPatternUrl, buildTelegramGiftUrl } from '@/lib/giftUrls'
 import { useTranslation } from '@/i18n'
-import { useGiftStore } from '@/stores/giftStore'
-import { updateEquippedGift, type TelegramUser } from '@/api/user'
+import { updateEquippedGift, getMySettings, type MySettings } from '@/api/user'
 
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
 
 type GiftPreviewProps = {
@@ -18,11 +17,16 @@ type GiftPreviewProps = {
 
 export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
   const { t } = useTranslation()
-  const equippedGift = useGiftStore((s) => s.equippedGift)
-  const equipGift = useGiftStore((s) => s.equipGift)
   const queryClient = useQueryClient()
   const lp = retrieveLaunchParams()
-  const userId = lp.tgWebAppData?.user?.id
+
+  // Read equipped gift from query cache — same pattern as grids
+  const { data: mySettings } = useQuery({
+    queryKey: ['my-settings'],
+    queryFn: getMySettings,
+    enabled: !!onDelete, // only own profile
+  })
+  const equippedGift = mySettings?.equipped_gift ?? null
 
   if (!gift) return (
     <div className="relative min-h-[200px] text-white overflow-hidden bg-muted"></div>
@@ -70,19 +74,14 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
               e.stopPropagation()
               const nextGift = isEquipped ? null : gift
 
-              // 1. Update Zustand store immediately (toggles equip/unequip)
-              equipGift(gift)
+              // Optimistic update — same pattern as grids (setQueryData → immediate UI)
+              queryClient.setQueryData<MySettings>(['my-settings'], (old) =>
+                old
+                  ? { ...old, equipped_gift: nextGift }
+                  : { equipped_gift: nextGift, favorite_palette: [] }
+              )
 
-              // 2. Update ['user'] query cache so re-fetches carry the right value
-              if (userId) {
-                queryClient.setQueryData<TelegramUser>(['user', userId], (old) =>
-                  old ? { ...old, equipped_gift: nextGift } : old
-                )
-              }
-
-              // 3. Persist to server; on success refresh ['my-settings'] from server
-              //    (same cross-device sync pattern as grids). No rollback on failure —
-              //    local store already has the correct state.
+              // Persist to server, then confirm from server
               updateEquippedGift(nextGift).then(() => {
                 queryClient.invalidateQueries({ queryKey: ['my-settings'] })
               })

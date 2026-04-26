@@ -5,6 +5,7 @@ import { BadgeCheckIcon } from 'lucide-react'
 import { useHasActiveSubscription } from '@/hooks/useSubscription'
 import { useQuery } from '@tanstack/react-query'
 import { getGrids, type Grid } from '@/api/gifts'
+import { getMySettings } from '@/api/user'
 import { buildGiftModelUrl, buildGiftPatternUrl } from '@/lib/giftUrls'
 import { ProxiedImage } from '@/components/ui/ProxiedImage'
 import { ProfileViewCounter } from './ProfileViewCounter'
@@ -62,11 +63,15 @@ export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = fal
     enabled: !!user?.id,
   })
 
-  // Equipped gift: own profile → Zustand store (reactive), other → server field
-  const storeEquipped = useGiftStore((s) => s.equippedGift)
+  // Equipped gift: own profile → ['my-settings'] query (same pattern as grids), other → server field
+  const { data: mySettings } = useQuery({
+    queryKey: ['my-settings'],
+    queryFn: getMySettings,
+    enabled: isOwnProfile,
+  })
   const setSelectedCell = useGiftStore((s) => s.setSelectedCell)
   const wornGift: Gift | null = isOwnProfile
-    ? storeEquipped
+    ? (mySettings?.equipped_gift ?? null)
     : (user?.equipped_gift ?? null)
 
   const wornBgStyle = wornGift?.background
@@ -164,8 +169,8 @@ export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = fal
     >
       {wornPatternUrl && <PatternBackground image={wornPatternUrl} />}
 
-      {/* Fade-out overlay: 20px gradient from theme background (bottom) to transparent (top) */}
-      <div className="absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-background to-transparent pointer-events-none z-10" />
+      {/* Fade-out overlay: gradient from theme background (bottom) to transparent (top) */}
+      <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none z-10" />
 
       {/* Top action buttons (share, settings) — inside the background */}
       {topActions && (

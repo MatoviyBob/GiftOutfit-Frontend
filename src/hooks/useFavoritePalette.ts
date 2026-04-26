@@ -1,48 +1,53 @@
 import { useCallback } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useGiftStore, MAX_FAVORITES } from '@/stores/giftStore'
-import { updateFavoritePalette } from '@/api/user'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { getMySettings, updateFavoritePalette, type MySettings } from '@/api/user'
 
-export { MAX_FAVORITES }
+export const MAX_FAVORITES = 3
 
 /**
- * Favourite palette hook.
+ * Favourite palette hook — same sync pattern as grids.
  *
- * - UI state lives in Zustand store (instant, persisted to localStorage).
- * - toggle() updates the store immediately AND fires a server mutation.
- * - On server success: invalidateQueries(['my-settings']) → triggers IndexPage's
- *   useQuery to refetch, which will see its own fresh data and confirm the save.
- *   This is the same pattern grids use for cross-device sync.
- * - On server error: store keeps the local value (no rollback — localStorage is truth).
+ * - Reads favorites from ['my-settings'] query (single source of truth).
+ * - toggle() updates query cache immediately (optimistic) AND fires server mutation.
+ * - On server success: invalidateQueries(['my-settings']) → refetch confirms save.
+ * - Cross-device sync: query refetches on every mount and window focus (no staleTime).
  */
 export const useFavoritePalette = () => {
-  const favorites = useGiftStore((s) => s.favoritePalette)
-  const toggleFavoriteStore = useGiftStore((s) => s.toggleFavorite)
   const queryClient = useQueryClient()
+
+  const { data: mySettings } = useQuery({
+    queryKey: ['my-settings'],
+    queryFn: getMySettings,
+  })
+  const favorites = mySettings?.favorite_palette ?? []
 
   const mutation = useMutation({
     mutationFn: updateFavoritePalette,
     onSuccess: () => {
-      // Refresh my-settings from server — confirms save and enables cross-device sync
       queryClient.invalidateQueries({ queryKey: ['my-settings'] })
     },
-    // No onError rollback — keep local state even if server call fails
   })
 
   const toggle = useCallback(
     (name: string) => {
-      // Compute next value based on current store state (avoids stale closure)
-      const current = useGiftStore.getState().favoritePalette
+      const current = queryClient.getQueryData<MySettings>(['my-settings'])?.favorite_palette ?? []
       const isSelected = current.includes(name)
       if (!isSelected && current.length >= MAX_FAVORITES) return
 
-      toggleFavoriteStore(name)   // update store + localStorage immediately
       const next = isSelected
         ? current.filter((n) => n !== name)
         : [...current, name]
-      mutation.mutate(next)       // persist to server
+
+      // Optimistic update — immediate UI response
+      queryClient.setQueryData<MySettings>(['my-settings'], (old) =>
+        old
+          ? { ...old, favorite_palette: next }
+          : { equipped_gift: null, favorite_palette: next }
+      )
+
+      mutation.mutate(next)
     },
-    [toggleFavoriteStore, mutation],
+    [queryClient, mutation],
   )
 
   const isFavorite = useCallback(

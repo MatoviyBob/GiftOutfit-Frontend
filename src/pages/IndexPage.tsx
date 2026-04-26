@@ -11,22 +11,17 @@ import { Settings, Share2 } from "lucide-react"
 import { Link } from 'react-router-dom';
 import { SubscriptionItem } from '@/components/subscription/SubscriptionItem'
 import { generateProfileShareLink } from '@/lib/shareProfile'
-import { trackProfileView, getUser, getMySettings, type TelegramUser } from '@/api/user'
+import { trackProfileView, getUser, type TelegramUser } from '@/api/user'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Spinner } from '@/components/ui/spinner'
-import { useGiftStore } from '@/stores/giftStore'
 
 export const IndexPage: FC = () => {
   const { t } = useTranslation()
   const lp = useMemo(() => retrieveLaunchParams(), []);
   const telegramUser = lp.tgWebAppData?.user
   const hasTrackedView = useRef(false)
-  const equipGift = useGiftStore((s) => s.equipGift)
-  const unequipGift = useGiftStore((s) => s.unequipGift)
-  const setFavoritePalette = useGiftStore((s) => s.setFavoritePalette)
-  const queryClient = useQueryClient()
 
   // Загружаем данные пользователя с сервера для получения bio + equipped_gift
   const { data: user, isLoading: isLoadingUser } = useQuery<TelegramUser>({
@@ -34,29 +29,6 @@ export const IndexPage: FC = () => {
     queryFn: () => getUser(telegramUser!.id),
     enabled: !!telegramUser?.id,
   })
-
-  // Fetch settings from server — same pattern as grids (no staleTime = refetch on mount
-  // and window refocus, enabling cross-device sync).
-  const { data: serverSettings } = useQuery({
-    queryKey: ['my-settings'],
-    queryFn: getMySettings,
-    enabled: !!telegramUser?.id,
-  })
-
-  // Sync server settings to Zustand store.
-  // Guard: skip if the user made a local change within the last 8 seconds
-  // (prevents server response from overwriting an in-flight optimistic update).
-  useEffect(() => {
-    if (!serverSettings) return
-    const sinceLocalChange = Date.now() - useGiftStore.getState().lastSettingsChange
-    if (sinceLocalChange < 8_000) return   // local change too recent — skip
-
-    if (serverSettings.equipped_gift) equipGift(serverSettings.equipped_gift)
-    else if (serverSettings.equipped_gift === null) unequipGift()
-    if (Array.isArray(serverSettings.favorite_palette)) {
-      setFavoritePalette(serverSettings.favorite_palette)
-    }
-  }, [serverSettings])
 
   // Отслеживаем просмотр своего профиля при загрузке
   useEffect(() => {
