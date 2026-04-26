@@ -158,16 +158,11 @@ export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = fal
   }
 
   return (
-    <div className="relative flex flex-col items-center px-4 pb-4 transition-all duration-500">
-      {/* Background ends before bottom padding — space between gradient and card below */}
-      {(wornBgStyle || wornPatternUrl) && (
-        <div
-          className="absolute inset-x-0 top-0 bottom-4 overflow-hidden transition-all duration-500"
-          style={wornBgStyle}
-        >
-          {wornPatternUrl && <PatternBackground image={wornPatternUrl} />}
-        </div>
-      )}
+    <div
+      className="relative flex flex-col items-center px-4 pb-4 overflow-hidden transition-all duration-500"
+      style={wornBgStyle}
+    >
+      {wornPatternUrl && <PatternBackground image={wornPatternUrl} />}
 
       {/* Top action buttons (share, settings) — inside the background */}
       {topActions && (
