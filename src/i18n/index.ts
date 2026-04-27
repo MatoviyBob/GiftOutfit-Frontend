@@ -1,19 +1,20 @@
 import React, { createContext, useContext, useCallback, useMemo, useState, useEffect, type ReactNode } from 'react'
 import { en } from './translations/en'
 import { ru } from './translations/ru'
+import { zh } from './translations/zh'
 
-export type Locale = 'en' | 'ru'
+export type Locale = 'en' | 'ru' | 'zh'
 
 export type Translations = typeof en
 
-const translations: Record<Locale, Translations> = { en, ru }
+const translations: Record<Locale, Translations> = { en, ru, zh: zh as unknown as Translations }
 
 const STORAGE_KEY = 'app-locale'
 
 function getStoredLocale(): Locale {
   if (typeof window === 'undefined') return 'en'
   const stored = localStorage.getItem(STORAGE_KEY) as Locale | null
-  if (stored === 'en' || stored === 'ru') return stored
+  if (stored === 'en' || stored === 'ru' || stored === 'zh') return stored
   return 'en'
 }
 

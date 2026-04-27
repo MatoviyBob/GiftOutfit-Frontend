@@ -56,8 +56,12 @@ export const en = {
     favoritePaletteDesc: 'Choose up to 3 favorite background colors. They will appear at the top of the background list.',
     development: 'Development',
     imageProxy: 'Image Proxy',
+    interface: 'Interface',
     language: 'Language',
     languageDesc: 'App language',
+    theme: 'Theme',
+    themeDark: 'Dark',
+    themeLight: 'Light',
   },
   profile: {
     online: 'online',

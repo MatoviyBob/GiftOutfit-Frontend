@@ -56,8 +56,12 @@ export const ru = {
     favoritePaletteDesc: 'Выберите до 3 любимых цветов фона. Они будут отображаться в начале списка фонов.',
     development: 'Разработка',
     imageProxy: 'Прокси изображений',
+    interface: 'Интерфейс',
     language: 'Язык',
     languageDesc: 'Язык приложения',
+    theme: 'Тема',
+    themeDark: 'Тёмная',
+    themeLight: 'Светлая',
   },
   profile: {
     online: 'в сети',

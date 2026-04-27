@@ -29,8 +29,8 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
       return // Ждем загрузки изображения
     }
 
-    // Минимальное время показа - 1.5 секунды
-    const minDisplayTime = 1500
+    // Минимальное время показа - 3 секунды (чтобы профиль успел прогрузиться)
+    const minDisplayTime = 3000
     const fadeOutDuration = 500 // Длительность плавного перехода
 
     const checkAndFade = () => {
