@@ -7,7 +7,7 @@ import mkcert from 'vite-plugin-mkcert';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss(), mkcert(),],
-  base: '/GiftOutfit-Frontend/', // for github pages
+  base: '/', // server deployment at root
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
