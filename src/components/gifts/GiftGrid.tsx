@@ -1,4 +1,4 @@
-import type { FC } from "react";
+import { type FC, memo, useCallback } from "react";
 import { useState } from "react";
 import { popup, retrieveLaunchParams } from "@telegram-apps/sdk-react";
 import { toast } from "sonner"
@@ -46,11 +46,11 @@ type DraggableCellProps = {
   cellIndex: number
   cell: Cell
   isOwnProfile: boolean
-  onClick: () => void
+  onCellClick: (rowIndex: number, cellIndex: number, gift: Cell['gift']) => void
   isOver?: boolean
 }
 
-const DraggableCell: FC<DraggableCellProps> = ({ id, cell, onClick, isOver, isOwnProfile }) => {
+const DraggableCell: FC<DraggableCellProps> = memo(({ id, cell, onCellClick, isOver, isOwnProfile, rowIndex, cellIndex }) => {
   const gift = cell.gift
   const isPinned = cell.pinned || false
   
@@ -83,12 +83,12 @@ const DraggableCell: FC<DraggableCellProps> = ({ id, cell, onClick, isOver, isOw
           gift={gift}
           isPinned={isPinned}
           isOwnProfile={isOwnProfile}
-          onClick={onClick}
+          onClick={() => onCellClick(rowIndex, cellIndex, gift)}
         />
       </div>
     </div>
   );
-};
+});
 
 export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false, isOwnProfile = false }) => {
   const { t } = useTranslation()
@@ -267,6 +267,18 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
   const [activeId, setActiveId] = useState<CellId | null>(null);
   const [overId, setOverId] = useState<CellId | null>(null);
 
+  // Stable callback — doesn't change when rows/cells change, so memoized DraggableCells don't re-render
+  const handleCellClick = useCallback((rowIndex: number, cellIndex: number, gift: Cell['gift']) => {
+    if (!isOwnProfile && !gift) return
+    setSelectedCell({
+      gridId,
+      rowIndex,
+      cellIndex,
+      gift,
+      isOwnProfile,
+    })
+  }, [gridId, isOwnProfile, setSelectedCell])
+
   const handleDragStart = (event: { active: { id: string | number } }) => {
     // На чужом профиле запрещаем drag and drop
     if (!isOwnProfile) {
@@ -396,17 +408,7 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
                     cell={cell}
                     isOwnProfile={isOwnProfile}
                     isOver={overId === cellId && activeId !== cellId}
-                    onClick={() => {
-                      // На чужом профиле запрещаем открывать пустые ячейки (и не показываем "+")
-                      if (!isOwnProfile && !cell.gift) return
-                      setSelectedCell({
-                        gridId,
-                        rowIndex,
-                        cellIndex,
-                        gift: cell.gift,
-                        isOwnProfile,
-                      })
-                    }}
+                    onCellClick={handleCellClick}
                   />
                 )
               })}

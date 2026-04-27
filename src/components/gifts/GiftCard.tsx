@@ -1,4 +1,4 @@
-import type { FC } from 'react'
+import { memo, type FC } from 'react'
 // import { GiftAnimation } from './GiftAnimation'
 import type { Gift } from '@/types/gift'
 import { PatternBackground } from './PatternBackground'
@@ -13,8 +13,8 @@ type Props = {
   onClick: () => void
 }
 
-export const GiftCard: FC<Props> = ({ 
-  gift, 
+export const GiftCard: FC<Props> = memo(({
+  gift,
   isPinned,
   isOwnProfile = true,
   onClick,
@@ -73,4 +73,4 @@ export const GiftCard: FC<Props> = ({
       </div>
     </div>
   )
-}
+})
