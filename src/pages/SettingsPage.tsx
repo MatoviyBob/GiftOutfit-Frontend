@@ -32,6 +32,18 @@ const ThemeToggle: FC<{ isDark: boolean; onToggle: () => void }> = ({ isDark, on
           : 'linear-gradient(135deg, #56ccf2, #2f80ed)',
       }}
     >
+      {/* Cloud (light mode only) */}
+      <span
+        className="absolute transition-opacity duration-500 pointer-events-none"
+        style={{ opacity: isDark ? 0 : 1, right: 7, top: '50%', transform: 'translateY(-50%)' }}
+      >
+        <span className="relative inline-block" style={{ width: 14, height: 9 }}>
+          <span className="absolute bg-white rounded-full" style={{ width: 7, height: 7, left: 0, top: 2 }} />
+          <span className="absolute bg-white rounded-full" style={{ width: 9, height: 9, left: 3, top: 0 }} />
+          <span className="absolute bg-white rounded-full" style={{ width: 6, height: 6, left: 9, top: 2 }} />
+        </span>
+      </span>
+
       {/* Stars (dark mode only) */}
       <span
         className="absolute inset-0 transition-opacity duration-500"
@@ -78,21 +90,20 @@ const ThemeToggle: FC<{ isDark: boolean; onToggle: () => void }> = ({ isDark, on
             }}
           />
         ) : (
-          // Sun rays
+          // Sun rays — container rotates around its own center (inset-0 = full thumb)
           <span className="relative flex items-center justify-center w-full h-full">
-            <span className="absolute w-2 h-2 rounded-full bg-amber-200 opacity-80" />
+            <span className="absolute w-2.5 h-2.5 rounded-full bg-amber-200 opacity-90" />
             {[0, 45, 90, 135].map((deg) => (
               <span
                 key={deg}
-                className="absolute rounded-full"
-                style={{
-                  width: 1.5,
-                  height: 4,
-                  background: '#fda085',
-                  transformOrigin: 'center 10px',
-                  transform: `rotate(${deg}deg) translateY(-8px)`,
-                }}
-              />
+                className="absolute inset-0"
+                style={{ transform: `rotate(${deg}deg)` }}
+              >
+                <span className="absolute left-1/2 -translate-x-1/2 rounded-full"
+                  style={{ top: 1, width: 2, height: 5, background: '#fda085' }} />
+                <span className="absolute left-1/2 -translate-x-1/2 rounded-full"
+                  style={{ bottom: 1, width: 2, height: 5, background: '#fda085' }} />
+              </span>
             ))}
           </span>
         )}
@@ -168,7 +179,7 @@ export const SettingsPage: FC = () => {
             <div className="ml-4 mb-2 text-sm text-foreground/50">{t('settings.interface')}</div>
             <ItemGroup className="bg-card rounded-xl overflow-hidden mt-0">
               {/* Language */}
-              <Item size="sm">
+              <Item size="sm" className="py-2">
                 <ItemMedia>
                   <Languages className="p-1 size-6 bg-[#72aee6] rounded-sm text-white" />
                 </ItemMedia>
@@ -177,7 +188,7 @@ export const SettingsPage: FC = () => {
                 </ItemContent>
                 <ItemActions>
                   <Select value={locale} onValueChange={(v) => setLocale(v as Locale)}>
-                    <SelectTrigger className="w-[120px] border-0 bg-transparent shadow-none">
+                    <SelectTrigger className="w-[120px] border-0 bg-transparent shadow-none h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -192,7 +203,7 @@ export const SettingsPage: FC = () => {
               <Separator />
 
               {/* Theme toggle */}
-              <Item size="sm">
+              <Item size="sm" className="py-2">
                 <ItemMedia>
                   <span className="p-1 size-6 rounded-sm flex items-center justify-center text-sm"
                     style={{ background: isDark ? '#1a1a4e' : '#56ccf2' }}>

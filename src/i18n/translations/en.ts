@@ -103,6 +103,9 @@ export const en = {
     wear: 'Wear',
     unWear: 'Unequip',
     errorCombinationNotFound: 'This combination was not found',
+    myGifts: 'My Gifts',
+    myGiftsEmpty: 'No gifts found in your Telegram profile',
+    myGiftsError: 'Could not load gifts. Check your privacy settings in Telegram.',
   },
   dialogs: {
     createNewAlbum: 'Create New Album',

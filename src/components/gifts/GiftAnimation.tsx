@@ -3,20 +3,21 @@ import { useEffect, useRef, type FC } from 'react'
 import type { Gift } from '@/types/gift'
 import { getLottieURL } from '@/types/gift'
 import { useQuery } from '@tanstack/react-query'
-import useApi from '@/api/hooks/useApi'
+import apiClient from '@/api/apiClient'
 import { proxyLottieUrl } from '@/lib/giftUrls'
+import { ProxiedImage } from '@/components/ui/ProxiedImage'
 
 type GiftAnimationProps = {
     gift: Gift
     className?: string
-    autoplay?: boolean
+    /** Static image shown instantly while Lottie loads */
+    fallbackSrc?: string
 }
 
-export const GiftAnimation: FC<GiftAnimationProps> = ({ gift, className, autoplay }) => {
+export const GiftAnimation: FC<GiftAnimationProps> = ({ gift, className, fallbackSrc }) => {
     const lottieURL = getLottieURL(gift)
-    const api = useApi()
     const lottieRef = useRef<LottieRefCurrentProps>(null)
-    const completedRef = useRef(false)
+    const playedRef = useRef(false)
 
     const { data: animationData } = useQuery({
         queryKey: ['lottie', lottieURL],
@@ -26,34 +27,34 @@ export const GiftAnimation: FC<GiftAnimationProps> = ({ gift, className, autopla
             const proxiedUrl = proxyLottieUrl(lottieURL)
             const url = new URL(proxiedUrl)
             const path = url.pathname + url.search
-            const res = await api.get(path)
+            const res = await apiClient.get(path)
             return res.data
         },
         staleTime: Infinity,
         retry: 1,
     })
 
-    // Reset completion flag whenever animation data changes
-    useEffect(() => {
-        completedRef.current = false
-    }, [animationData])
+    useEffect(() => { playedRef.current = false }, [animationData])
 
-    if (!animationData) return <span className={className}></span>
+    // Static image until data ready — no blank flash, no layout shift
+    if (!animationData) {
+        return fallbackSrc
+            ? <ProxiedImage src={fallbackSrc} alt="" className={`${className} object-contain`} />
+            : <span className={className} />
+    }
 
     return (
         <Lottie
             lottieRef={lottieRef}
             animationData={animationData}
             loop={false}
-            renderer="canvas"
+            renderer="svg"
             className={`${className} cursor-pointer`}
-            autoPlay={autoplay}
-            initialSegment={autoplay === false ? [1, 1] : undefined}
-            onComplete={() => { completedRef.current = true }}
+            autoPlay={true}
+            onComplete={() => { playedRef.current = true }}
             onClick={() => {
-                // Restart without remounting — much faster than key increment
-                if (completedRef.current) {
-                    completedRef.current = false
+                if (playedRef.current) {
+                    playedRef.current = false
                     lottieRef.current?.goToAndPlay(0)
                 }
             }}

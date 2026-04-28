@@ -80,8 +80,8 @@ export const ru = {
     goToMyProfile: 'перейти в мой профиль',
   },
   giftDrawer: {
-    constructor: 'Конструктор',
-    freeform: 'Произвольный',
+    constructor: 'Поиск',
+    freeform: 'Креатив',
     collection: 'Коллекция',
     pinToProfile: 'Закрепить в профиле',
     searchCollection: 'Поиск по коллекции',
@@ -103,6 +103,9 @@ export const ru = {
     wear: 'Надеть',
     unWear: 'Снять',
     errorCombinationNotFound: 'Такая комбинация не найдена',
+    myGifts: 'Мои подарки',
+    myGiftsEmpty: 'Подарки в профиле Telegram не найдены',
+    myGiftsError: 'Не удалось загрузить подарки. Проверьте настройки приватности в Telegram.',
   },
   dialogs: {
     createNewAlbum: 'Новый альбом',

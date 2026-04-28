@@ -3,7 +3,7 @@ import { Crown, Trash } from 'lucide-react'
 import type { Gift } from '@/types/gift'
 import { GiftAnimation } from './GiftAnimation'
 import { PatternBackground } from './PatternBackground'
-import { buildGiftPatternUrl, buildTelegramGiftUrl } from '@/lib/giftUrls'
+import { buildGiftModelUrl, buildGiftPatternUrl, buildTelegramGiftUrl } from '@/lib/giftUrls'
 import { useTranslation } from '@/i18n'
 import { updateEquippedGift, getMySettings, type MySettings } from '@/api/user'
 
@@ -41,6 +41,7 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
   const hasPattern = !!gift.pattern
   const patternUrl = gift.pattern ? buildGiftPatternUrl(gift.name, gift.pattern) : null
   const telegramUrl = gift.url ?? (gift.id > 0 ? buildTelegramGiftUrl(gift.name, gift.id) : null)
+  const modelUrl = gift.name && gift.model ? buildGiftModelUrl(gift.name, gift.model) : undefined
 
   const isOwnProfile = !!onDelete
   const isEquipped = equippedGift?.id === gift.id && equippedGift?.name === gift.name
@@ -107,7 +108,7 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
 
       <div className="relative h-full z-10 flex items-center justify-center">
         <div className="h-5/8 w-full max-w-xs rounded-3xl flex items-center justify-center overflow-hidden">
-          <GiftAnimation gift={gift} className="h-full" />
+          <GiftAnimation gift={gift} className="h-full" fallbackSrc={modelUrl} />
         </div>
 
         {telegramUrl && (

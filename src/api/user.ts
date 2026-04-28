@@ -57,3 +57,26 @@ export const trackProfileView = async (userId: number): Promise<void> => {
     await apiClient.post(`/users/${userId}/views`);
 };
 
+export interface TelegramGiftItem {
+  type: 'unique' | 'regular'
+  // unique gift fields
+  id: number
+  name: string
+  model?: string
+  pattern?: string
+  background?: import('@/types/gift').GiftBackground
+  // regular gift fields
+  emoji?: string
+  star_count?: number
+}
+
+export interface TelegramGiftsResponse {
+  gifts: TelegramGiftItem[]
+  total_count: number
+}
+
+export const getMyTelegramGifts = async (): Promise<TelegramGiftsResponse> => {
+    const res = await apiClient.get('/me/telegram-gifts');
+    return res.data;
+};
+

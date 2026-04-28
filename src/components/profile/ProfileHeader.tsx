@@ -1,5 +1,5 @@
 import type { FC, ReactNode } from 'react'
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { BadgeCheckIcon } from 'lucide-react'
 import { useHasActiveSubscription } from '@/hooks/useSubscription'
@@ -35,12 +35,12 @@ type PinnedGiftCell = {
 }
 
 const POSITION_RANGES = [
-  { xMin: 80,   xMax: 125,  yMin: -40, yMax: -20 },
-  { xMin: 75,   xMax: 125,  yMin: -20, yMax: 20  },
-  { xMin: 115,  xMax: 125,  yMin: 20,  yMax: 60  },
-  { xMin: -90,  xMax: -125, yMin: -40, yMax: -20 },
-  { xMin: -105, xMax: -125, yMin: -20, yMax: 20  },
-  { xMin: -115, xMax: -125, yMin: 20,  yMax: 60  },
+  { xMin: 68,  xMax: 110, yMin: -60, yMax: -20 },  // top-right
+  { xMin: 80,  xMax: 115, yMin: -20, yMax: 20  },  // right
+  { xMin: 65,  xMax: 105, yMin: 20,  yMax: 45  },  // lower-right
+  { xMin: -68, xMax: -110, yMin: -60, yMax: -20 }, // top-left
+  { xMin: -80, xMax: -115, yMin: -20, yMax: 20  }, // left
+  { xMin: -65, xMax: -105, yMin: 20,  yMax: 45  }, // lower-left
 ]
 
 export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = false, topActions }) => {
@@ -86,13 +86,13 @@ export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = fal
     ? buildGiftModelUrl(wornGift.name, wornGift.model)
     : null
 
-  // Build pinned gifts list with cell location info.
+  // Step 1: collect pinned gift identities (deterministic, no random).
   // If a gift is also the worn gift, exclude it from floating (priority → near username).
-  const pinnedGiftCells = useMemo<PinnedGiftCell[]>(() => {
+  type PinnedGiftBase = Omit<PinnedGiftCell, 'posX' | 'posY' | 'animationName' | 'animationDuration'>
+  const pinnedGiftBase = useMemo<PinnedGiftBase[]>(() => {
     if (grids.length === 0) return []
     const mainAlbum: Grid = grids[0]
-    const result: PinnedGiftCell[] = []
-    let posIdx = 0
+    const result: PinnedGiftBase[] = []
 
     for (let rowIdx = 0; rowIdx < 2 && result.length < 6; rowIdx++) {
       const row = mainAlbum.rows[rowIdx]
@@ -100,33 +100,45 @@ export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = fal
       for (let cellIdx = 0; cellIdx < row.cells.length && result.length < 6; cellIdx++) {
         const cell = row.cells[cellIdx]
         if (!cell?.gift?.model || !cell.pinned) continue
-
-        // If this gift is the worn one, skip it from floating
         const isWorn = wornGift &&
           cell.gift.id === wornGift.id &&
           cell.gift.name === wornGift.name
         if (isWorn) continue
-
-        const range = POSITION_RANGES[posIdx % POSITION_RANGES.length]
-        const posX = Math.round(Math.random() * (range.xMax - range.xMin) + range.xMin)
-        const posY = Math.round(Math.random() * (range.yMax - range.yMin) + range.yMin)
-        const animations = ['float', 'float-2', 'float-3']
-
-        result.push({
-          gift: cell.gift,
-          gridId: mainAlbum.id,
-          rowIndex: rowIdx,
-          cellIndex: cellIdx,
-          posX,
-          posY,
-          animationName: animations[posIdx % animations.length],
-          animationDuration: 3 + (posIdx % 3) * 0.5,
-        })
-        posIdx++
+        result.push({ gift: cell.gift, gridId: mainAlbum.id, rowIndex: rowIdx, cellIndex: cellIdx })
       }
     }
     return result
   }, [grids, wornGift])
+
+  // Step 2: assign random zones + positions on each mount (and when pinned gifts change).
+  // Using useState + useEffect ensures positions are freshly randomized every time the
+  // component mounts (navigating away and back gives a new layout).
+  const [pinnedGiftCells, setPinnedGiftCells] = useState<PinnedGiftCell[]>([])
+  useEffect(() => {
+    if (pinnedGiftBase.length === 0) {
+      setPinnedGiftCells([])
+      return
+    }
+    const animations = ['float', 'float-2', 'float-3']
+    // Shuffle zones so each mount produces a different arrangement
+    const zones = [...POSITION_RANGES].sort(() => Math.random() - 0.5)
+    setPinnedGiftCells(
+      pinnedGiftBase.map((base, idx) => {
+        const range = zones[idx % zones.length]
+        const sign = range.xMin < 0 ? -1 : 1
+        const xAbs = Math.round(Math.random() * (Math.abs(range.xMax) - Math.abs(range.xMin)) + Math.abs(range.xMin))
+        const posX = sign * xAbs
+        const posY = Math.round(Math.random() * (range.yMax - range.yMin) + range.yMin)
+        return {
+          ...base,
+          posX,
+          posY,
+          animationName: animations[idx % animations.length],
+          animationDuration: 3 + (idx % 3) * 0.5,
+        }
+      })
+    )
+  }, [pinnedGiftBase])
 
   /** Find the cell location of the worn gift in order to open GiftDrawer */
   const findWornCell = () => {

@@ -103,6 +103,9 @@ export const zh = {
     wear: '佩戴',
     unWear: '取下',
     errorCombinationNotFound: '未找到此组合',
+    myGifts: '我的礼物',
+    myGiftsEmpty: '您的 Telegram 主页中未找到礼物',
+    myGiftsError: '无法加载礼物，请检查 Telegram 隐私设置。',
   },
   dialogs: {
     createNewAlbum: '新建相册',

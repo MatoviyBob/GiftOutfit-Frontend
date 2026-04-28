@@ -21,6 +21,7 @@ import { useBackgrounds } from '@/hooks/useGiftQueries'
 import type { GiftCollectionResponse } from '@/hooks/useGiftCollection'
 import { buildGiftModelUrl, buildGiftPatternUrl } from '@/lib/giftUrls'
 import apiClient from '@/api/apiClient'
+import { getMyTelegramGifts, type TelegramGiftItem } from '@/api/user'
 import { useConstructorState } from '@/hooks/useConstructorState'
 import { useFreeformBackdropsAndSymbols } from '@/hooks/useFreeformBackdropsAndSymbols'
 import { useEffect, useMemo, useState, useRef } from 'react'
@@ -28,10 +29,12 @@ import { useFavoritePalette } from '@/hooks/useFavoritePalette'
 import { useDrawerItems, type DrawerItem } from '@/hooks/useDrawerItems'
 import { GiftPreview } from './GiftPreview'
 import { GiftFieldButton } from './GiftFieldButton'
+import { PatternBackground } from './PatternBackground'
+import { ProxiedImage } from '@/components/ui/ProxiedImage'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 
-type ConstructorMode = 'constructor' | 'freeform'
+type ConstructorMode = 'constructor' | 'freeform' | 'my-gifts'
 
 // Нормализация названия коллекции для сравнения
 function normalizeCollectionName(name: string): string {
@@ -111,9 +114,18 @@ export const GiftDrawer: FC = () => {
 
   const isConstructorModeActive = constructorMode === 'constructor'
   const legacyEnabled = constructorMode === 'freeform'
+  const isMyGiftsMode = constructorMode === 'my-gifts'
 
   const giftName = legacyEnabled ? selectedCell?.gift?.name : undefined
   const { data: backgrounds } = useBackgrounds()
+
+  // My Telegram gifts (Bot API getUserGifts, unique type only)
+  const telegramGiftsQuery = useQuery({
+    queryKey: ['my-telegram-gifts'],
+    queryFn: getMyTelegramGifts,
+    enabled: isOwnProfile && isMyGiftsMode && !!selectedCell,
+    staleTime: 1000 * 60 * 5, // cache 5 min
+  })
 
   // Коллекции для обоих режимов: GET /constructor/collections (proxy/changes-tg/gifts больше не используется)
   const collectionsQuery = useQuery({
@@ -418,13 +430,15 @@ export const GiftDrawer: FC = () => {
     setConstructorMode('constructor')
   }
 
+  // useDrawerItems only accepts 'constructor' | 'freeform'; my-gifts mode falls back to constructor
+  const drawerItemsMode = isMyGiftsMode ? 'constructor' : constructorMode as 'constructor' | 'freeform'
   const drawerItems = useDrawerItems({
     editingFieldKey,
     selectedGift: selectedCell?.gift,
     gifts,
     backgrounds,
     giftTree,
-    mode: constructorMode,
+    mode: drawerItemsMode,
   })
 
   const searchDrawerItems =
@@ -507,14 +521,14 @@ export const GiftDrawer: FC = () => {
     }
 
     if (editingFieldKey === 'background') {
-      selectField('background', item.title, { background: item.background }, constructorMode)
+      selectField('background', item.title, { background: item.background }, drawerItemsMode)
     } else if (editingFieldKey === 'pattern') {
-      selectField('pattern', item.title, undefined, constructorMode)
-      if (constructorMode === 'constructor' && item.id !== undefined) {
-        selectField('id', String(item.id), undefined, constructorMode)
+      selectField('pattern', item.title, undefined, drawerItemsMode)
+      if (drawerItemsMode === 'constructor' && item.id !== undefined) {
+        selectField('id', String(item.id), undefined, drawerItemsMode)
       }
     } else {
-      selectField(editingFieldKey, item.title, undefined, constructorMode)
+      selectField(editingFieldKey, item.title, undefined, drawerItemsMode)
     }
 
     setEditingFieldKey(null)
@@ -679,20 +693,26 @@ export const GiftDrawer: FC = () => {
                     <Copy className="w-4 h-4" />
                   </button>
 
-                  {/* Constructor / Freeform tabs — center */}
+                  {/* Constructor / Freeform / My Gifts tabs — center */}
                   <Tabs value={constructorMode} onValueChange={(value) => setConstructorMode(value as ConstructorMode)}>
-                    <TabsList className="inline-flex gap-x-2 p-0 px-1 justify-center bg-card/50 rounded-full border border-solid border-border">
+                    <TabsList className="inline-flex gap-x-1 p-0 px-1 justify-center bg-card/50 rounded-full border border-solid border-border">
                       <TabsTrigger
                         value="constructor"
-                        className="px-4 !grow-0 whitespace-nowrap bg-transparent !data-[state=active]:bg-card dark:!data-[state=active]:bg-card rounded-full border-0 border-transparent data-[state=active]:border-primary !shadow-none !data-[state=active]:shadow-none shrink-0 text-muted-foreground data-[state=active]:text-foreground h-auto cursor-pointer"
+                        className="px-3 !grow-0 whitespace-nowrap bg-transparent !data-[state=active]:bg-card dark:!data-[state=active]:bg-card rounded-full border-0 border-transparent data-[state=active]:border-primary !shadow-none !data-[state=active]:shadow-none shrink-0 text-muted-foreground data-[state=active]:text-foreground h-auto cursor-pointer"
                       >
                         <span>{t('giftDrawer.constructor')}</span>
                       </TabsTrigger>
                       <TabsTrigger
                         value="freeform"
-                        className="px-4 !grow-0 whitespace-nowrap bg-transparent !data-[state=active]:bg-card dark:!data-[state=active]:bg-card rounded-full border-0 border-transparent data-[state=active]:border-primary !shadow-none !data-[state=active]:shadow-none shrink-0 text-muted-foreground data-[state=active]:text-foreground h-auto cursor-pointer"
+                        className="px-3 !grow-0 whitespace-nowrap bg-transparent !data-[state=active]:bg-card dark:!data-[state=active]:bg-card rounded-full border-0 border-transparent data-[state=active]:border-primary !shadow-none !data-[state=active]:shadow-none shrink-0 text-muted-foreground data-[state=active]:text-foreground h-auto cursor-pointer"
                       >
                         <span>{t('giftDrawer.freeform')}</span>
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="my-gifts"
+                        className="px-3 !grow-0 whitespace-nowrap bg-transparent !data-[state=active]:bg-card dark:!data-[state=active]:bg-card rounded-full border-0 border-transparent data-[state=active]:border-primary !shadow-none !data-[state=active]:shadow-none shrink-0 text-muted-foreground data-[state=active]:text-foreground h-auto cursor-pointer"
+                      >
+                        <span>{t('giftDrawer.myGifts')}</span>
                       </TabsTrigger>
                     </TabsList>
                   </Tabs>
@@ -716,7 +736,97 @@ export const GiftDrawer: FC = () => {
                 </div>
               )}
 
-              <div className="bg-card/50 mx-4 divide-y divide-border rounded-xl border border-solid border-border overflow-hidden">
+              {/* ── My Gifts grid ─────────────────────────────────────── */}
+              {isMyGiftsMode && (
+                <div className="mx-4 mb-3">
+                  {telegramGiftsQuery.isLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Spinner className="w-6 h-6" />
+                    </div>
+                  ) : telegramGiftsQuery.isError ? (
+                    <div className="text-center py-6 text-sm text-muted-foreground px-2">
+                      {t('giftDrawer.myGiftsError')}
+                    </div>
+                  ) : !telegramGiftsQuery.data?.gifts?.some((g: TelegramGiftItem) => g.type === 'unique') ? (
+                    <div className="text-center py-6 text-sm text-muted-foreground px-2">
+                      {t('giftDrawer.myGiftsEmpty')}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      {telegramGiftsQuery.data.gifts
+                        .filter((item: TelegramGiftItem) => item.type === 'unique')
+                        .map((item: TelegramGiftItem) => {
+                          const modelUrl = item.name && item.model
+                            ? buildGiftModelUrl(item.name, item.model)
+                            : null
+                          const patternUrl = item.name && item.pattern
+                            ? buildGiftPatternUrl(item.name, item.pattern)
+                            : null
+                          return (
+                            <div
+                              key={`u-${item.name}-${item.id}`}
+                              style={item.background
+                                ? { background: `radial-gradient(circle, ${item.background.hex.centerColor} 0%, ${item.background.hex.edgeColor} 100%)` }
+                                : {}
+                              }
+                              className={`relative aspect-square rounded-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform select-none overflow-hidden ${!item.background ? 'bg-card' : ''}`}
+                              onClick={() => {
+                                if (!selectedCell || !item.name) return
+                                const gift = {
+                                  id: item.id,
+                                  name: item.name,
+                                  model: item.model,
+                                  pattern: item.pattern,
+                                  background: item.background,
+                                }
+                                useGiftStore.setState({ selectedCell: { ...selectedCell, gift } })
+                                setConstructorMode('constructor')
+                              }}
+                            >
+                              <div className="relative h-full w-full flex items-center justify-center overflow-hidden rounded-lg">
+                                {/* Pattern */}
+                                {patternUrl && <PatternBackground image={patternUrl} />}
+
+                                {/* Subtle grid overlay */}
+                                <div className="absolute inset-0 opacity-[0.03]">
+                                  <div className="grid grid-cols-3 gap-0.5 p-1">
+                                    {Array.from({ length: 9 }).map((_, i) => (
+                                      <div key={i} className="w-full h-full bg-foreground rounded-[2px]" />
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Ribbon with gift number */}
+                                <div
+                                  style={item.background ? { background: item.background.hex.edgeColor } : {}}
+                                  className={`absolute top-2 -right-7 w-25 text-center ${!item.background ? 'bg-zinc-800' : ''} rotate-45 z-12`}
+                                >
+                                  <span className="text-xs text-white/80 font-medium">#{item.id}</span>
+                                </div>
+
+                                {/* Gift model */}
+                                <div className="relative z-10 flex items-center justify-center">
+                                  {modelUrl ? (
+                                    <ProxiedImage
+                                      src={modelUrl}
+                                      alt={`${item.name} #${item.id}`}
+                                      className="w-2/3"
+                                    />
+                                  ) : (
+                                    <span className="text-3xl">{item.emoji ?? '🎁'}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })
+                      }
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className={`bg-card/50 mx-4 divide-y divide-border rounded-xl border border-solid border-border overflow-hidden ${isMyGiftsMode ? 'hidden' : ''}`}>
                 {giftFields.map((field, i) => {
                   const fieldLoading = isConstructorModeActive
                     ? (i === 0
