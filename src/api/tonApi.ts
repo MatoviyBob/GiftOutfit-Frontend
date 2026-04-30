@@ -146,7 +146,11 @@ export const nftToGift = (
     matchedCollection = findCollection(nft.collection.name, knownCollections);
   }
 
-  if (!matchedCollection) return null;
+  // Final fallback: use NFT collection name directly.
+  // This covers brand-new gift types that the constructor API hasn't indexed yet —
+  // the CDN (cdn.changes.tg) and NFT metadata share the same source, so the name works.
+  const giftName = matchedCollection ?? nft.collection?.name ?? null;
+  if (!giftName) return null;
 
   // Parse attributes (Telegram gifts use Model / Backdrop / Symbol)
   const attrs = nft.metadata?.attributes ?? [];
@@ -168,7 +172,7 @@ export const nftToGift = (
 
   return {
     id,
-    name: matchedCollection,
+    name: giftName,
     model: model || undefined,
     background,
     pattern: pattern || undefined,
