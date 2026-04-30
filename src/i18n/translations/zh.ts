@@ -62,6 +62,10 @@ export const zh = {
     theme: '主题',
     themeDark: '深色',
     themeLight: '浅色',
+    tonWallet: 'TON 钱包',
+    tonWalletConnect: '连接',
+    tonWalletConnected: '断开',
+    tonWalletConnecting: '连接中...',
   },
   profile: {
     online: '在线',

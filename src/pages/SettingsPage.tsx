@@ -275,11 +275,11 @@ export const SettingsPage: FC = () => {
                       </ItemMedia>
                       <ItemContent>
                         <ItemTitle>{t('settings.tonWallet')}</ItemTitle>
-                        {isTonConnected && shortAddress && (
-                          <span className="text-xs text-foreground/40">{shortAddress}</span>
-                        )}
                       </ItemContent>
                       <ItemActions>
+                        {isTonConnected && shortAddress && (
+                          <span className="text-xs text-foreground/40 mr-2">{shortAddress}</span>
+                        )}
                         <button
                           onClick={isTonConnected ? disconnectTon : connectTon}
                           className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
