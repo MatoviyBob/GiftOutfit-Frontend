@@ -62,6 +62,10 @@ export const en = {
     theme: 'Theme',
     themeDark: 'Dark',
     themeLight: 'Light',
+    tonWallet: 'TON Wallet',
+    tonWalletConnect: 'Connect',
+    tonWalletConnected: 'Disconnect',
+    tonWalletConnecting: 'Connecting...',
   },
   profile: {
     online: 'online',

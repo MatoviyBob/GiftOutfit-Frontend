@@ -22,6 +22,8 @@ import type { GiftCollectionResponse } from '@/hooks/useGiftCollection'
 import { buildGiftModelUrl, buildGiftPatternUrl } from '@/lib/giftUrls'
 import apiClient from '@/api/apiClient'
 import { getMyTelegramGifts, type TelegramGiftItem } from '@/api/user'
+import { fetchWalletNfts, nftToGift, deduplicateGifts } from '@/api/tonApi'
+import { useTonWalletConnect } from '@/hooks/useTonWallet'
 import { useConstructorState } from '@/hooks/useConstructorState'
 import { useFreeformBackdropsAndSymbols } from '@/hooks/useFreeformBackdropsAndSymbols'
 import { useEffect, useMemo, useState, useRef } from 'react'
@@ -119,12 +121,26 @@ export const GiftDrawer: FC = () => {
   const giftName = legacyEnabled ? selectedCell?.gift?.name : undefined
   const { data: backgrounds } = useBackgrounds()
 
+  // TON wallet state
+  const { isConnected: isTonConnected, walletAddress } = useTonWalletConnect()
+
   // My Telegram gifts (Bot API getUserGifts, unique type only)
   const telegramGiftsQuery = useQuery({
     queryKey: ['my-telegram-gifts'],
     queryFn: getMyTelegramGifts,
     enabled: isOwnProfile && isMyGiftsMode && !!selectedCell,
     staleTime: 1000 * 60 * 5, // cache 5 min
+  })
+
+  // Wallet NFTs (only when TON wallet is connected)
+  const walletGiftsQuery = useQuery({
+    queryKey: ['wallet-nfts', walletAddress],
+    queryFn: async () => {
+      if (!walletAddress) return []
+      return fetchWalletNfts(walletAddress)
+    },
+    enabled: isOwnProfile && isMyGiftsMode && isTonConnected && !!walletAddress,
+    staleTime: 1000 * 60 * 3, // cache 3 min
   })
 
   // Коллекции для обоих режимов: GET /constructor/collections (proxy/changes-tg/gifts больше не используется)
@@ -739,7 +755,7 @@ export const GiftDrawer: FC = () => {
               {/* ── My Gifts grid ─────────────────────────────────────── */}
               {isMyGiftsMode && (
                 <div className="mx-4 mb-3">
-                  {telegramGiftsQuery.isLoading ? (
+                  {telegramGiftsQuery.isLoading || walletGiftsQuery.isLoading ? (
                     <div className="flex justify-center py-8">
                       <Spinner className="w-6 h-6" />
                     </div>
@@ -747,15 +763,42 @@ export const GiftDrawer: FC = () => {
                     <div className="text-center py-6 text-sm text-muted-foreground px-2">
                       {t('giftDrawer.myGiftsError')}
                     </div>
-                  ) : !telegramGiftsQuery.data?.gifts?.some((g: TelegramGiftItem) => g.type === 'unique') ? (
-                    <div className="text-center py-6 text-sm text-muted-foreground px-2">
-                      {t('giftDrawer.myGiftsEmpty')}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-2">
-                      {telegramGiftsQuery.data.gifts
-                        .filter((item: TelegramGiftItem) => item.type === 'unique')
-                        .map((item: TelegramGiftItem) => {
+                  ) : (() => {
+                    // Build merged + deduplicated gift list
+                    const telegramUnique = (telegramGiftsQuery.data?.gifts ?? [])
+                      .filter((g: TelegramGiftItem) => g.type === 'unique')
+                      .map((g: TelegramGiftItem): TelegramGiftItem & { _source: 'telegram' } => ({ ...g, _source: 'telegram' }))
+
+                    // Convert wallet NFTs to Gift objects
+                    const walletRaw = walletGiftsQuery.data ?? []
+                    const knownCollections = Array.isArray(collectionsQuery.data) ? collectionsQuery.data as string[] : []
+                    const walletConverted = walletRaw
+                      .map(nft => nftToGift(nft, knownCollections, backgrounds ?? []))
+                      .filter((g): g is NonNullable<typeof g> => g !== null)
+
+                    // Deduplicate: use telegram gifts as primary, wallet fills missing ids
+                    const telegramGiftObjects = telegramUnique.map(g => ({
+                      id: g.id, name: g.name ?? '', model: g.model, pattern: g.pattern, background: g.background
+                    }))
+                    const merged = deduplicateGifts(telegramGiftObjects, walletConverted)
+
+                    // Build display items merging metadata from original sources
+                    const displayItems = merged.map(gift => {
+                      const tg = telegramUnique.find(g => g.id === gift.id && g.name === gift.name)
+                      return tg ? { ...gift, emoji: tg.emoji } : gift
+                    })
+
+                    if (displayItems.length === 0) {
+                      return (
+                        <div className="text-center py-6 text-sm text-muted-foreground px-2">
+                          {t('giftDrawer.myGiftsEmpty')}
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div className="grid grid-cols-3 gap-2">
+                        {displayItems.map((item) => {
                           const modelUrl = item.name && item.model
                             ? buildGiftModelUrl(item.name, item.model)
                             : null
@@ -784,10 +827,7 @@ export const GiftDrawer: FC = () => {
                               }}
                             >
                               <div className="relative h-full w-full flex items-center justify-center overflow-hidden rounded-lg">
-                                {/* Pattern */}
                                 {patternUrl && <PatternBackground image={patternUrl} />}
-
-                                {/* Subtle grid overlay */}
                                 <div className="absolute inset-0 opacity-[0.03]">
                                   <div className="grid grid-cols-3 gap-0.5 p-1">
                                     {Array.from({ length: 9 }).map((_, i) => (
@@ -795,16 +835,12 @@ export const GiftDrawer: FC = () => {
                                     ))}
                                   </div>
                                 </div>
-
-                                {/* Ribbon with gift number */}
                                 <div
                                   style={item.background ? { background: item.background.hex.edgeColor } : {}}
                                   className={`absolute top-2 -right-7 w-25 text-center ${!item.background ? 'bg-zinc-800' : ''} rotate-45 z-12`}
                                 >
                                   <span className="text-xs text-white/80 font-medium">#{item.id}</span>
                                 </div>
-
-                                {/* Gift model */}
                                 <div className="relative z-10 flex items-center justify-center">
                                   {modelUrl ? (
                                     <ProxiedImage
@@ -813,16 +849,16 @@ export const GiftDrawer: FC = () => {
                                       className="w-2/3"
                                     />
                                   ) : (
-                                    <span className="text-3xl">{item.emoji ?? '🎁'}</span>
+                                    <span className="text-3xl">{'emoji' in item ? (item as { emoji?: string }).emoji ?? '🎁' : '🎁'}</span>
                                   )}
                                 </div>
                               </div>
                             </div>
                           )
-                        })
-                      }
-                    </div>
-                  )}
+                        })}
+                      </div>
+                    )
+                  })()}
                 </div>
               )}
 

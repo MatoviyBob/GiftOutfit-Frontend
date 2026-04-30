@@ -62,6 +62,10 @@ export const ru = {
     theme: 'Тема',
     themeDark: 'Тёмная',
     themeLight: 'Светлая',
+    tonWallet: 'Кошелёк TON',
+    tonWalletConnect: 'Подключить',
+    tonWalletConnected: 'Отключить',
+    tonWalletConnecting: 'Подключение...',
   },
   profile: {
     online: 'в сети',

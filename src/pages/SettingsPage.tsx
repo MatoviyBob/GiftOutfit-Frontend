@@ -1,7 +1,7 @@
 import { type FC, useState } from 'react'
 import { Page } from '@/components/Page'
 import { Item, ItemActions, ItemContent, ItemGroup, ItemMedia, ItemTitle } from '@/components/ui/item'
-import { ChevronRightIcon, Megaphone, CreditCardIcon, MessageSquare, ImageIcon, Languages, Palette } from 'lucide-react'
+import { ChevronRightIcon, Megaphone, CreditCardIcon, MessageSquare, ImageIcon, Languages, Palette, Wallet } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { useSubscription } from '@/hooks/useSubscription'
 import { useImageProxySetting } from '@/hooks/useImageProxySetting'
@@ -9,6 +9,7 @@ import { useTranslation, type Locale } from '@/i18n'
 import { FavoritePaletteDrawer } from '@/components/settings/FavoritePaletteDrawer'
 import { useFavoritePalette } from '@/hooks/useFavoritePalette'
 import { useTheme } from '@/components/theme-provider'
+import { useTonWalletConnect } from '@/hooks/useTonWallet'
 
 import { Link } from 'react-router-dom'
 import {
@@ -122,6 +123,7 @@ export const SettingsPage: FC = () => {
   const { theme, setTheme } = useTheme()
 
   const isDark = theme === 'dark'
+  const { isConnected: isTonConnected, shortAddress, connect: connectTon, disconnect: disconnectTon } = useTonWalletConnect()
 
   const handleThemeToggle = () => {
     setTheme(isDark ? 'light' : 'dark')
@@ -223,7 +225,7 @@ export const SettingsPage: FC = () => {
             </ItemGroup>
           </div>
 
-          {settingsButtonGroups.map((group) => (
+          {settingsButtonGroups.map((group, groupIndex) => (
             <div className="mb-4" key={group.title}>
               <div className="ml-4 mb-2 text-sm text-foreground/50">{group.title}</div>
               <ItemGroup className="bg-card rounded-xl overflow-hidden mt-0">
@@ -262,6 +264,38 @@ export const SettingsPage: FC = () => {
                     {index < group.items.length - 1 && <Separator />}
                   </>
                 ))}
+
+                {/* TON Wallet — only in Account group */}
+                {groupIndex === 0 && (
+                  <>
+                    <Separator />
+                    <Item size="sm">
+                      <ItemMedia>
+                        <Wallet className="p-1 size-6 bg-[#0088cc] rounded-sm text-white" />
+                      </ItemMedia>
+                      <ItemContent>
+                        <ItemTitle>{t('settings.tonWallet')}</ItemTitle>
+                        {isTonConnected && shortAddress && (
+                          <span className="text-xs text-foreground/40">{shortAddress}</span>
+                        )}
+                      </ItemContent>
+                      <ItemActions>
+                        <button
+                          onClick={isTonConnected ? disconnectTon : connectTon}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                            isTonConnected
+                              ? 'bg-destructive/15 text-destructive hover:bg-destructive/25'
+                              : 'bg-[#0088cc] text-white hover:bg-[#0077b5]'
+                          }`}
+                        >
+                          {isTonConnected
+                            ? t('settings.tonWalletConnected')
+                            : t('settings.tonWalletConnect')}
+                        </button>
+                      </ItemActions>
+                    </Item>
+                  </>
+                )}
               </ItemGroup>
             </div>
           ))}

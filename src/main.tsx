@@ -9,7 +9,10 @@ import './mockEnv.ts'
 import { init } from './Init.ts'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { TonConnectUIProvider } from '@tonconnect/ui-react'
+
 const client = new QueryClient()
+const TON_MANIFEST_URL = `${window.location.origin}/tonconnect-manifest.json`
 
 const root = createRoot(document.getElementById('root')!)
 
@@ -32,9 +35,11 @@ try {
   }).then(() => {
     root.render(
       <StrictMode>
-        <QueryClientProvider client={client}>
-          <App />
-        </QueryClientProvider>
+        <TonConnectUIProvider manifestUrl={TON_MANIFEST_URL}>
+          <QueryClientProvider client={client}>
+            <App />
+          </QueryClientProvider>
+        </TonConnectUIProvider>
       </StrictMode>,
     );
   })
