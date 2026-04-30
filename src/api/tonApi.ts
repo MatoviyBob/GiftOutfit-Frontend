@@ -56,7 +56,7 @@ export const fetchWalletNfts = async (walletAddress: string): Promise<TonNftItem
 
   while (true) {
     const res = await fetch(
-      `${TON_API_BASE}/accounts/${encodeURIComponent(walletAddress)}/nfts?limit=${limit}&offset=${offset}&indirect_ownership=false`
+      `${TON_API_BASE}/accounts/${encodeURIComponent(walletAddress)}/nfts?limit=${limit}&offset=${offset}&indirect_ownership=true`
     );
     if (!res.ok) break;
     const data: TonNftsResponse = await res.json();
