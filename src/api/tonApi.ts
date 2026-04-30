@@ -1,6 +1,19 @@
 /**
  * TON API utilities for fetching gift NFTs from user wallets.
  * Uses tonapi.io (no auth required for basic usage).
+ *
+ * Detection strategy:
+ *   Telegram gift NFTs are identified by their fragment.com image URL
+ *   (e.g. "https://nft.fragment.com/gift/lightsword-21945.webp").
+ *   This is more reliable than collection name matching because:
+ *   - Collection names can vary (singular/plural, apostrophes, etc.)
+ *   - The URL slug is a canonical, stable identifier
+ *
+ * Collection matching:
+ *   The slug (e.g. "lightsword") is compared against known constructor
+ *   collection names using fuzzy normalization (remove all non-alphanumeric).
+ *   "lightsword" matches "Light Swords" → normalised "lightswords" startsWith "lightsword".
+ *   New gifts automatically appear as long as constructor API knows them.
  */
 
 import type { Gift, GiftBackground } from '@/types/gift';
@@ -15,6 +28,8 @@ export interface TonNftItem {
   };
   metadata?: {
     name?: string;
+    image?: string;
+    lottie?: string;
     attributes?: Array<{
       trait_type: string;
       value: string;
@@ -56,6 +71,57 @@ export const fetchWalletNfts = async (walletAddress: string): Promise<TonNftItem
 };
 
 /**
+ * Normalise a string for comparison: lowercase + remove all non-alphanumeric.
+ * "Light Swords" → "lightswords"
+ * "Durov's Cap" → "durovscap"
+ * "lightsword"  → "lightsword"
+ */
+function normalizeStr(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Check if an NFT is a Telegram gift by looking for the fragment.com gift URL.
+ */
+function isTelegramGift(nft: TonNftItem): boolean {
+  const img = nft.metadata?.image ?? nft.metadata?.lottie ?? '';
+  return img.includes('nft.fragment.com/gift/');
+}
+
+/**
+ * Extract the gift slug from the fragment.com image URL.
+ * "https://nft.fragment.com/gift/lightsword-21945.webp" → "lightsword"
+ */
+function getFragmentSlug(nft: TonNftItem): string | null {
+  const img = nft.metadata?.image ?? nft.metadata?.lottie ?? '';
+  const match = img.match(/nft\.fragment\.com\/gift\/([a-zA-Z0-9]+)-\d+/);
+  return match ? match[1].toLowerCase() : null;
+}
+
+/**
+ * Find the best-matching constructor collection name for a given slug/name.
+ * Tries exact match first, then startsWith in either direction.
+ */
+function findCollection(candidate: string, knownCollections: string[]): string | null {
+  const nc = normalizeStr(candidate);
+  if (!nc) return null;
+
+  // 1. Exact match
+  const exact = knownCollections.find(c => normalizeStr(c) === nc);
+  if (exact) return exact;
+
+  // 2. Known collection name starts with our candidate (e.g. "lightsword" vs "lightswords")
+  const colStartsWith = knownCollections.find(c => normalizeStr(c).startsWith(nc));
+  if (colStartsWith) return colStartsWith;
+
+  // 3. Our candidate starts with the known collection name
+  const candStartsWith = knownCollections.find(c => nc.startsWith(normalizeStr(c)));
+  if (candStartsWith) return candStartsWith;
+
+  return null;
+}
+
+/**
  * Convert a TonNftItem to a Gift object (if it matches Telegram gift structure).
  * Returns null if the NFT doesn't look like a Telegram gift.
  */
@@ -64,27 +130,34 @@ export const nftToGift = (
   knownCollections: string[],
   backgrounds: GiftBackground[]
 ): Gift | null => {
-  const collectionName = nft.collection?.name;
-  if (!collectionName) return null;
+  // Must be a Telegram gift (verified via fragment.com URL)
+  if (!isTelegramGift(nft)) return null;
 
-  // Normalize and check if it's a known Telegram gift collection
-  const normalizeStr = (s: string) => s.replace(/\s+/g, '').toLowerCase();
-  const normalizedCollection = normalizeStr(collectionName);
-  const matchedCollection = knownCollections.find(
-    (c) => normalizeStr(c) === normalizedCollection
-  );
+  // Try slug-based matching first (most reliable)
+  const slug = getFragmentSlug(nft);
+  let matchedCollection: string | null = null;
+
+  if (slug) {
+    matchedCollection = findCollection(slug, knownCollections);
+  }
+
+  // Fallback: match by collection.name (handles edge cases)
+  if (!matchedCollection && nft.collection?.name) {
+    matchedCollection = findCollection(nft.collection.name, knownCollections);
+  }
+
   if (!matchedCollection) return null;
 
-  // Parse attributes
+  // Parse attributes (Telegram gifts use Model / Backdrop / Symbol)
   const attrs = nft.metadata?.attributes ?? [];
   const getAttr = (trait: string) =>
     attrs.find((a) => a.trait_type.toLowerCase() === trait.toLowerCase())?.value ?? '';
 
-  const model = getAttr('model') || getAttr('Model') || 'Original';
-  const backdropName = getAttr('backdrop') || getAttr('Backdrop') || '';
-  const pattern = getAttr('pattern') || getAttr('Pattern') || getAttr('symbol') || '';
+  const model = getAttr('model') || 'Original';
+  const backdropName = getAttr('backdrop');
+  const pattern = getAttr('symbol') || getAttr('pattern') || '';
 
-  // Extract gift ID from NFT name (e.g., "Durov's Cap #417" → 417)
+  // Extract gift ID from NFT name: "Light Sword #21945" → 21945
   const nftName = nft.metadata?.name ?? '';
   const idMatch = nftName.match(/#(\d+)$/);
   const id = idMatch ? parseInt(idMatch[1], 10) : 0;
@@ -104,6 +177,7 @@ export const nftToGift = (
 
 /**
  * Deduplicate gifts: if same gift.name + gift.id appears twice, keep only one.
+ * Telegram gifts take priority over wallet-derived gifts.
  */
 export const deduplicateGifts = (
   telegramGifts: Gift[],
