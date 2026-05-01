@@ -140,8 +140,11 @@ export const GiftDrawer: FC = () => {
     },
   })
 
-  // Auto-sync on first open if cache is empty and wallet is connected
+  // Auto-sync on first open if cache is empty and wallet is connected.
+  // syncMutation excluded from deps intentionally — stable ref used instead.
   const autoSyncedRef = useRef(false)
+  const syncMutateRef = useRef(syncMutation.mutate)
+  syncMutateRef.current = syncMutation.mutate
   useEffect(() => {
     if (
       !autoSyncedRef.current &&
@@ -150,13 +153,13 @@ export const GiftDrawer: FC = () => {
       !!selectedCell &&
       isTonConnected &&
       cachedGiftsQuery.isSuccess &&
-      !cachedGiftsQuery.data?.synced_at &&
-      !syncMutation.isPending
+      !cachedGiftsQuery.data?.synced_at
     ) {
       autoSyncedRef.current = true
-      syncMutation.mutate()
+      syncMutateRef.current()
     }
-  }, [isMyGiftsMode, isOwnProfile, selectedCell, isTonConnected, cachedGiftsQuery.isSuccess, cachedGiftsQuery.data, syncMutation])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMyGiftsMode, isOwnProfile, selectedCell, isTonConnected, cachedGiftsQuery.isSuccess, cachedGiftsQuery.data?.synced_at])
 
   // Коллекции для обоих режимов: GET /constructor/collections (proxy/changes-tg/gifts больше не используется)
   const collectionsQuery = useQuery({

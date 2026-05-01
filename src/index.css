@@ -167,10 +167,6 @@
   80% { transform: rotate(2deg); }
 }
 
-/* Eliminate 300 ms tap delay on mobile (Telegram WebApp / iOS Safari) */
-button, a, [role="button"], [tabindex] {
-  touch-action: manipulation;
-}
 /* Suppress tap highlight on iOS */
 * {
   -webkit-tap-highlight-color: transparent;
