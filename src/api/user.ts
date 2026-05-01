@@ -80,3 +80,42 @@ export const getMyTelegramGifts = async (): Promise<TelegramGiftsResponse> => {
     return res.data;
 };
 
+// ── My Gifts cache ────────────────────────────────────────────────────────
+
+export interface CachedGift {
+  id: number
+  name: string
+  model?: string
+  backdrop_name?: string
+  pattern?: string
+}
+
+export interface MyGiftsResponse {
+  gifts: CachedGift[]
+  wallet_address: string | null
+  synced_at: string | null
+}
+
+export interface SyncMyGiftsResponse {
+  gifts: CachedGift[]
+  synced_at: string
+  count: number
+}
+
+/** Save (or clear) the connected TON wallet address on the server. */
+export const updateTonWallet = async (walletAddress: string | null): Promise<void> => {
+    await apiClient.put('/me/ton-wallet', { wallet_address: walletAddress });
+};
+
+/** Return the cached gift list (no external API calls). */
+export const getMyCachedGifts = async (): Promise<MyGiftsResponse> => {
+    const res = await apiClient.get('/me/my-gifts');
+    return res.data;
+};
+
+/** Re-scan the wallet and update the server-side gift cache. */
+export const syncMyGifts = async (): Promise<SyncMyGiftsResponse> => {
+    const res = await apiClient.post('/me/my-gifts/sync');
+    return res.data;
+};
+

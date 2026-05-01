@@ -108,8 +108,9 @@ export const zh = {
     unWear: '取下',
     errorCombinationNotFound: '未找到此组合',
     myGifts: '我的礼物',
-    myGiftsEmpty: '您的 Telegram 主页中未找到礼物',
-    myGiftsError: '无法加载礼物，请检查 Telegram 隐私设置。',
+    myGiftsEmpty: '未找到礼物，请点击刷新按钮。',
+    myGiftsError: '无法加载礼物。',
+    myGiftsNoWallet: '请在设置中连接 TON 钱包以查看您的礼物。',
   },
   dialogs: {
     createNewAlbum: '新建相册',

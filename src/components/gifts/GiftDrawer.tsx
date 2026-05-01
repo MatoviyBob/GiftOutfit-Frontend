@@ -21,9 +21,9 @@ import { useBackgrounds } from '@/hooks/useGiftQueries'
 import type { GiftCollectionResponse } from '@/hooks/useGiftCollection'
 import { buildGiftModelUrl, buildGiftPatternUrl } from '@/lib/giftUrls'
 import apiClient from '@/api/apiClient'
-import { getMyTelegramGifts, type TelegramGiftItem } from '@/api/user'
-import { fetchWalletNfts, nftToGift, deduplicateGifts } from '@/api/tonApi'
+import { getMyCachedGifts, syncMyGifts, type CachedGift } from '@/api/user'
 import { useTonWalletConnect } from '@/hooks/useTonWallet'
+import { RefreshCw } from 'lucide-react'
 import { useConstructorState } from '@/hooks/useConstructorState'
 import { useFreeformBackdropsAndSymbols } from '@/hooks/useFreeformBackdropsAndSymbols'
 import { useEffect, useMemo, useState, useRef } from 'react'
@@ -121,27 +121,42 @@ export const GiftDrawer: FC = () => {
   const giftName = legacyEnabled ? selectedCell?.gift?.name : undefined
   const { data: backgrounds } = useBackgrounds()
 
-  // TON wallet state
-  const { isConnected: isTonConnected, walletAddress } = useTonWalletConnect()
+  // TON wallet state (also syncs wallet address to server on connect/disconnect)
+  const { isConnected: isTonConnected } = useTonWalletConnect()
 
-  // My Telegram gifts (Bot API getUserGifts, unique type only)
-  const telegramGiftsQuery = useQuery({
-    queryKey: ['my-telegram-gifts'],
-    queryFn: getMyTelegramGifts,
+  // Cached gifts from server — loaded once, never stale (user refreshes manually)
+  const cachedGiftsQuery = useQuery({
+    queryKey: ['my-cached-gifts'],
+    queryFn: getMyCachedGifts,
     enabled: isOwnProfile && isMyGiftsMode && !!selectedCell,
-    staleTime: 1000 * 60 * 5, // cache 5 min
+    staleTime: Infinity,
   })
 
-  // Wallet NFTs (only when TON wallet is connected)
-  const walletGiftsQuery = useQuery({
-    queryKey: ['wallet-nfts', walletAddress],
-    queryFn: async () => {
-      if (!walletAddress) return []
-      return fetchWalletNfts(walletAddress)
+  // Sync mutation — re-scans wallet and updates server cache
+  const syncMutation = useMutation({
+    mutationFn: syncMyGifts,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-cached-gifts'] })
     },
-    enabled: isOwnProfile && isMyGiftsMode && isTonConnected && !!walletAddress,
-    staleTime: 1000 * 60 * 3, // cache 3 min
   })
+
+  // Auto-sync on first open if cache is empty and wallet is connected
+  const autoSyncedRef = useRef(false)
+  useEffect(() => {
+    if (
+      !autoSyncedRef.current &&
+      isMyGiftsMode &&
+      isOwnProfile &&
+      !!selectedCell &&
+      isTonConnected &&
+      cachedGiftsQuery.isSuccess &&
+      !cachedGiftsQuery.data?.synced_at &&
+      !syncMutation.isPending
+    ) {
+      autoSyncedRef.current = true
+      syncMutation.mutate()
+    }
+  }, [isMyGiftsMode, isOwnProfile, selectedCell, isTonConnected, cachedGiftsQuery.isSuccess, cachedGiftsQuery.data, syncMutation])
 
   // Коллекции для обоих режимов: GET /constructor/collections (proxy/changes-tg/gifts больше не используется)
   const collectionsQuery = useQuery({
@@ -733,72 +748,68 @@ export const GiftDrawer: FC = () => {
                     </TabsList>
                   </Tabs>
 
-                  {/* Paste button — right */}
-                  <button
-                    className={`w-9 h-9 flex items-center justify-center rounded-full border border-border transition-colors ${
-                      copiedGift
-                        ? 'text-primary bg-card/50 hover:bg-card cursor-pointer'
-                        : 'text-muted-foreground/30 cursor-not-allowed'
-                    }`}
-                    disabled={!copiedGift}
-                    onClick={() => {
-                      if (!copiedGift || !selectedCell) return
-                      useGiftStore.setState({ selectedCell: { ...selectedCell, gift: copiedGift } })
-                    }}
-                    title="Paste gift"
-                  >
-                    <ClipboardPaste className="w-4 h-4" />
-                  </button>
+                  {/* Refresh (my-gifts) / Paste button — right */}
+                  <div className="flex items-center gap-1">
+                    {isMyGiftsMode && (
+                      <button
+                        className="w-9 h-9 flex items-center justify-center rounded-full border border-border transition-colors text-foreground bg-card/50 hover:bg-card cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        disabled={syncMutation.isPending || cachedGiftsQuery.isLoading}
+                        onClick={() => syncMutation.mutate()}
+                        title="Refresh gifts"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+                      </button>
+                    )}
+                    <button
+                      className={`w-9 h-9 flex items-center justify-center rounded-full border border-border transition-colors ${
+                        copiedGift
+                          ? 'text-primary bg-card/50 hover:bg-card cursor-pointer'
+                          : 'text-muted-foreground/30 cursor-not-allowed'
+                      }`}
+                      disabled={!copiedGift}
+                      onClick={() => {
+                        if (!copiedGift || !selectedCell) return
+                        useGiftStore.setState({ selectedCell: { ...selectedCell, gift: copiedGift } })
+                      }}
+                      title="Paste gift"
+                    >
+                      <ClipboardPaste className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               )}
 
               {/* ── My Gifts grid ─────────────────────────────────────── */}
               {isMyGiftsMode && (
                 <div className="mx-4 mb-3">
-                  {telegramGiftsQuery.isLoading || walletGiftsQuery.isLoading ? (
+                  {(cachedGiftsQuery.isLoading || syncMutation.isPending) ? (
                     <div className="flex justify-center py-8">
                       <Spinner className="w-6 h-6" />
                     </div>
-                  ) : telegramGiftsQuery.isError ? (
+                  ) : cachedGiftsQuery.isError ? (
                     <div className="text-center py-6 text-sm text-muted-foreground px-2">
                       {t('giftDrawer.myGiftsError')}
                     </div>
                   ) : (() => {
-                    // Build merged + deduplicated gift list
-                    const telegramUnique = (telegramGiftsQuery.data?.gifts ?? [])
-                      .filter((g: TelegramGiftItem) => g.type === 'unique')
-                      .map((g: TelegramGiftItem): TelegramGiftItem & { _source: 'telegram' } => ({ ...g, _source: 'telegram' }))
+                    const cachedGifts: CachedGift[] = cachedGiftsQuery.data?.gifts ?? []
 
-                    // Convert wallet NFTs to Gift objects
-                    const walletRaw = walletGiftsQuery.data ?? []
-                    const knownCollections = Array.isArray(collectionsQuery.data) ? collectionsQuery.data as string[] : []
-                    const walletConverted = walletRaw
-                      .map(nft => nftToGift(nft, knownCollections, backgrounds ?? []))
-                      .filter((g): g is NonNullable<typeof g> => g !== null)
-
-                    // Deduplicate: use telegram gifts as primary, wallet fills missing ids
-                    const telegramGiftObjects = telegramUnique.map(g => ({
-                      id: g.id, name: g.name ?? '', model: g.model, pattern: g.pattern, background: g.background
-                    }))
-                    const merged = deduplicateGifts(telegramGiftObjects, walletConverted)
-
-                    // Build display items merging metadata from original sources
-                    const displayItems = merged.map(gift => {
-                      const tg = telegramUnique.find(g => g.id === gift.id && g.name === gift.name)
-                      return tg ? { ...gift, emoji: tg.emoji } : gift
-                    })
-
-                    if (displayItems.length === 0) {
+                    if (cachedGifts.length === 0) {
                       return (
                         <div className="text-center py-6 text-sm text-muted-foreground px-2">
-                          {t('giftDrawer.myGiftsEmpty')}
+                          {isTonConnected
+                            ? t('giftDrawer.myGiftsEmpty')
+                            : t('giftDrawer.myGiftsNoWallet')}
                         </div>
                       )
                     }
 
                     return (
                       <div className="grid grid-cols-3 gap-2">
-                        {displayItems.map((item) => {
+                        {cachedGifts.map((item) => {
+                          // Resolve background from backdrop_name using loaded backgrounds list
+                          const background = item.backdrop_name
+                            ? backgrounds?.find(bg => bg.name.toLowerCase() === item.backdrop_name!.toLowerCase())
+                            : undefined
                           const modelUrl = item.name && item.model
                             ? buildGiftModelUrl(item.name, item.model)
                             : null
@@ -808,21 +819,19 @@ export const GiftDrawer: FC = () => {
                           return (
                             <div
                               key={`u-${item.name}-${item.id}`}
-                              style={item.background
-                                ? { background: `radial-gradient(circle, ${item.background.hex.centerColor} 0%, ${item.background.hex.edgeColor} 100%)` }
+                              style={background
+                                ? { background: `radial-gradient(circle, ${background.hex.centerColor} 0%, ${background.hex.edgeColor} 100%)` }
                                 : {}
                               }
-                              className={`relative aspect-square rounded-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform select-none overflow-hidden ${!item.background ? 'bg-card' : ''}`}
+                              className={`relative aspect-square rounded-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform select-none overflow-hidden ${!background ? 'bg-card' : ''}`}
                               onClick={() => {
                                 if (!selectedCell || !item.name) return
-                                const gift = {
-                                  id: item.id,
-                                  name: item.name,
-                                  model: item.model,
-                                  pattern: item.pattern,
-                                  background: item.background,
-                                }
-                                useGiftStore.setState({ selectedCell: { ...selectedCell, gift } })
+                                useGiftStore.setState({
+                                  selectedCell: {
+                                    ...selectedCell,
+                                    gift: { id: item.id, name: item.name, model: item.model, pattern: item.pattern, background },
+                                  },
+                                })
                                 setConstructorMode('constructor')
                               }}
                             >
@@ -836,8 +845,8 @@ export const GiftDrawer: FC = () => {
                                   </div>
                                 </div>
                                 <div
-                                  style={item.background ? { background: item.background.hex.edgeColor } : {}}
-                                  className={`absolute top-2 -right-7 w-25 text-center ${!item.background ? 'bg-zinc-800' : ''} rotate-45 z-12`}
+                                  style={background ? { background: background.hex.edgeColor } : {}}
+                                  className={`absolute top-2 -right-7 w-25 text-center ${!background ? 'bg-zinc-800' : ''} rotate-45 z-12`}
                                 >
                                   <span className="text-xs text-white/80 font-medium">#{item.id}</span>
                                 </div>
@@ -849,7 +858,7 @@ export const GiftDrawer: FC = () => {
                                       className="w-2/3"
                                     />
                                   ) : (
-                                    <span className="text-3xl">{'emoji' in item ? (item as { emoji?: string }).emoji ?? '🎁' : '🎁'}</span>
+                                    <span className="text-3xl">🎁</span>
                                   )}
                                 </div>
                               </div>

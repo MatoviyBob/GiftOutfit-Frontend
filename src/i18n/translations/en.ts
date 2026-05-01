@@ -108,8 +108,9 @@ export const en = {
     unWear: 'Unequip',
     errorCombinationNotFound: 'This combination was not found',
     myGifts: 'My Gifts',
-    myGiftsEmpty: 'No gifts found in your Telegram profile',
-    myGiftsError: 'Could not load gifts. Check your privacy settings in Telegram.',
+    myGiftsEmpty: 'No gifts found. Tap the refresh button.',
+    myGiftsError: 'Could not load gifts.',
+    myGiftsNoWallet: 'Connect your TON wallet in Settings to see your gifts.',
   },
   dialogs: {
     createNewAlbum: 'Create New Album',

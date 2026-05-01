@@ -108,8 +108,9 @@ export const ru = {
     unWear: 'Снять',
     errorCombinationNotFound: 'Такая комбинация не найдена',
     myGifts: 'Мои подарки',
-    myGiftsEmpty: 'Подарки в профиле Telegram не найдены',
-    myGiftsError: 'Не удалось загрузить подарки. Проверьте настройки приватности в Telegram.',
+    myGiftsEmpty: 'Подарки не найдены. Нажмите кнопку обновления.',
+    myGiftsError: 'Не удалось загрузить подарки.',
+    myGiftsNoWallet: 'Подключите TON кошелёк в настройках, чтобы видеть свои подарки.',
   },
   dialogs: {
     createNewAlbum: 'Новый альбом',
