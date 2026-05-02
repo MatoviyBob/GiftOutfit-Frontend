@@ -19,9 +19,9 @@ import { toast } from 'sonner'
 import { Spinner } from '../ui/spinner'
 import { useBackgrounds } from '@/hooks/useGiftQueries'
 import type { GiftCollectionResponse } from '@/hooks/useGiftCollection'
-import { buildGiftModelUrl, buildGiftPatternUrl } from '@/lib/giftUrls'
+import { buildGiftModelUrl, buildGiftPatternUrl, IMG_SIZE } from '@/lib/giftUrls'
 import apiClient from '@/api/apiClient'
-import { getMyCachedGifts, syncMyGifts, type CachedGift } from '@/api/user'
+import { getMyCachedGifts, syncMyGifts, type CachedGift, getMyTelegramGifts, type TelegramGiftItem } from '@/api/user'
 import { useTonWalletConnect } from '@/hooks/useTonWallet'
 import { RefreshCw } from 'lucide-react'
 import { useConstructorState } from '@/hooks/useConstructorState'
@@ -124,7 +124,7 @@ export const GiftDrawer: FC = () => {
   // TON wallet state (also syncs wallet address to server on connect/disconnect)
   const { isConnected: isTonConnected } = useTonWalletConnect()
 
-  // Cached gifts from server — loaded once, never stale (user refreshes manually)
+  // Cached gifts from TON wallet — loaded once, never stale (user refreshes manually)
   const cachedGiftsQuery = useQuery({
     queryKey: ['my-cached-gifts'],
     queryFn: getMyCachedGifts,
@@ -132,7 +132,49 @@ export const GiftDrawer: FC = () => {
     staleTime: Infinity,
   })
 
-  // Sync mutation — re-scans wallet and updates server cache
+  // Telegram profile gifts (Bot API getUserGifts) — regular + unique, refreshed every 5 min
+  const telegramGiftsQuery = useQuery({
+    queryKey: ['my-telegram-gifts'],
+    queryFn: getMyTelegramGifts,
+    enabled: isOwnProfile && isMyGiftsMode && !!selectedCell,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  // Merge Telegram profile gifts + TON wallet gifts, deduplicate unique gifts by name:id
+  const mergedGifts = useMemo((): TelegramGiftItem[] => {
+    const tgItems: TelegramGiftItem[] = telegramGiftsQuery.data?.gifts ?? []
+    const walletItems: CachedGift[] = cachedGiftsQuery.data?.gifts ?? []
+
+    // Convert TON wallet CachedGift → TelegramGiftItem (all are unique type)
+    const walletAsItems: TelegramGiftItem[] = walletItems.map(g => ({
+      type: 'unique' as const,
+      id: g.id,
+      name: g.name,
+      model: g.model,
+      pattern: g.pattern,
+      backdrop_name: g.backdrop_name,
+    }))
+
+    // TG profile gifts take priority; wallet fills in what's not already there
+    const seen = new Set<string>()
+    const result: TelegramGiftItem[] = []
+
+    const addIfNew = (item: TelegramGiftItem) => {
+      const key = item.type === 'unique'
+        ? `unique:${item.name}:${item.id}`
+        : `regular:${item.id}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        result.push(item)
+      }
+    }
+
+    tgItems.forEach(addIfNew)
+    walletAsItems.forEach(addIfNew)
+    return result
+  }, [telegramGiftsQuery.data, cachedGiftsQuery.data])
+
+  // Sync mutation — re-scans TON wallet and updates server cache
   const syncMutation = useMutation({
     mutationFn: syncMyGifts,
     onSuccess: () => {
@@ -244,14 +286,14 @@ export const GiftDrawer: FC = () => {
       return collections.map((name, id) => ({
         id,
         title: name,
-        image: buildGiftModelUrl(name, 'Original'),
+        image: buildGiftModelUrl(name, 'Original', IMG_SIZE.THUMB),
       }))
     }
     if (editingFieldKey === 'model' && collection) {
       return models.map((name, id) => ({
         id,
         title: name,
-        image: buildGiftModelUrl(collection, name),
+        image: buildGiftModelUrl(collection, name, IMG_SIZE.THUMB),
       }))
     }
     if (editingFieldKey === 'background' && collection && selectedCell?.gift?.model) {
@@ -265,7 +307,7 @@ export const GiftDrawer: FC = () => {
       return symbols.map((s) => ({
         id: s.gift_number,
         title: s.symbol,
-        pattern: buildGiftPatternUrl(collection, s.symbol),
+        pattern: buildGiftPatternUrl(collection, s.symbol, IMG_SIZE.THUMB),
         gift_number: s.gift_number,
       }))
     }
@@ -289,7 +331,7 @@ export const GiftDrawer: FC = () => {
       return freeformModels.map((modelName, id) => ({
         id,
         title: modelName,
-        image: buildGiftModelUrl(collectionName, modelName),
+        image: buildGiftModelUrl(collectionName, modelName, IMG_SIZE.THUMB),
       }))
     }
     if (editingFieldKey === 'background') {
@@ -311,7 +353,7 @@ export const GiftDrawer: FC = () => {
         .map((s, index) => ({
           id: index,
           title: s.symbol,
-          pattern: buildGiftPatternUrl(collectionName, s.symbol),
+          pattern: buildGiftPatternUrl(collectionName, s.symbol, IMG_SIZE.THUMB),
         }))
     }
     return []
@@ -389,7 +431,7 @@ export const GiftDrawer: FC = () => {
             items.push({
               id: `${collectionName}-${matchingGift.gift_number}`,
               title: `${collectionName} #${matchingGift.gift_number}`,
-              image: buildGiftModelUrl(collectionName, matchingGift.model),
+              image: buildGiftModelUrl(collectionName, matchingGift.model, IMG_SIZE.THUMB),
               collection: collectionName,
               gift_number: matchingGift.gift_number,
               model: matchingGift.model,
@@ -403,7 +445,7 @@ export const GiftDrawer: FC = () => {
             items.push({
               id: `${collectionName}-${gift.gift_number}`,
               title: `${collectionName} #${gift.gift_number}`,
-              image: buildGiftModelUrl(collectionName, gift.model),
+              image: buildGiftModelUrl(collectionName, gift.model, IMG_SIZE.THUMB),
               collection: collectionName,
               gift_number: gift.gift_number,
               model: gift.model,
@@ -756,11 +798,14 @@ export const GiftDrawer: FC = () => {
                     {isMyGiftsMode && (
                       <button
                         className="w-9 h-9 flex items-center justify-center rounded-full border border-border transition-colors text-foreground bg-card/50 hover:bg-card cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                        disabled={syncMutation.isPending || cachedGiftsQuery.isLoading}
-                        onClick={() => syncMutation.mutate()}
+                        disabled={syncMutation.isPending || cachedGiftsQuery.isLoading || telegramGiftsQuery.isLoading}
+                        onClick={() => {
+                          syncMutation.mutate()
+                          queryClient.invalidateQueries({ queryKey: ['my-telegram-gifts'] })
+                        }}
                         title="Refresh gifts"
                       >
-                        <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`w-4 h-4 ${syncMutation.isPending || telegramGiftsQuery.isFetching ? 'animate-spin' : ''}`} />
                       </button>
                     )}
                     <button
@@ -785,92 +830,93 @@ export const GiftDrawer: FC = () => {
               {/* ── My Gifts grid ─────────────────────────────────────── */}
               {isMyGiftsMode && (
                 <div className="mx-4 mb-3">
-                  {(cachedGiftsQuery.isLoading || syncMutation.isPending) ? (
+                  {(cachedGiftsQuery.isLoading || telegramGiftsQuery.isLoading || syncMutation.isPending) ? (
                     <div className="flex justify-center py-8">
                       <Spinner className="w-6 h-6" />
                     </div>
-                  ) : cachedGiftsQuery.isError ? (
+                  ) : (cachedGiftsQuery.isError && telegramGiftsQuery.isError) ? (
                     <div className="text-center py-6 text-sm text-muted-foreground px-2">
                       {t('giftDrawer.myGiftsError')}
                     </div>
-                  ) : (() => {
-                    const cachedGifts: CachedGift[] = cachedGiftsQuery.data?.gifts ?? []
-
-                    if (cachedGifts.length === 0) {
-                      return (
-                        <div className="text-center py-6 text-sm text-muted-foreground px-2">
-                          {isTonConnected
-                            ? t('giftDrawer.myGiftsEmpty')
-                            : t('giftDrawer.myGiftsNoWallet')}
-                        </div>
-                      )
-                    }
-
-                    return (
-                      <div className="grid grid-cols-3 gap-2">
-                        {cachedGifts.map((item) => {
-                          // Resolve background from backdrop_name using loaded backgrounds list
-                          const background = item.backdrop_name
-                            ? backgrounds?.find(bg => bg.name.toLowerCase() === item.backdrop_name!.toLowerCase())
-                            : undefined
-                          const modelUrl = item.name && item.model
-                            ? buildGiftModelUrl(item.name, item.model)
-                            : null
-                          const patternUrl = item.name && item.pattern
-                            ? buildGiftPatternUrl(item.name, item.pattern)
-                            : null
+                  ) : mergedGifts.length === 0 ? (
+                    <div className="text-center py-6 text-sm text-muted-foreground px-2">
+                      {isTonConnected
+                        ? t('giftDrawer.myGiftsEmpty')
+                        : t('giftDrawer.myGiftsNoWallet')}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      {mergedGifts.map((item) => {
+                        // ── Regular (emoji) gift ──────────────────────────────
+                        if (item.type === 'regular') {
                           return (
                             <div
-                              key={`u-${item.name}-${item.id}`}
-                              style={background
-                                ? { background: `radial-gradient(circle, ${background.hex.centerColor} 0%, ${background.hex.edgeColor} 100%)` }
-                                : {}
-                              }
-                              className={`relative aspect-square rounded-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform select-none overflow-hidden ${!background ? 'bg-card' : ''}`}
-                              onClick={() => {
-                                if (!selectedCell || !item.name) return
-                                useGiftStore.setState({
-                                  selectedCell: {
-                                    ...selectedCell,
-                                    gift: { id: item.id, name: item.name, model: item.model, pattern: item.pattern, background },
-                                  },
-                                })
-                                setConstructorMode('constructor')
-                              }}
+                              key={`r-${item.id}`}
+                              className="relative aspect-square rounded-lg flex flex-col items-center justify-center bg-card select-none overflow-hidden"
                             >
-                              <div className="relative h-full w-full flex items-center justify-center overflow-hidden rounded-lg">
-                                {patternUrl && <PatternBackground image={patternUrl} />}
-                                <div className="absolute inset-0 opacity-[0.03]">
-                                  <div className="grid grid-cols-3 gap-0.5 p-1">
-                                    {Array.from({ length: 9 }).map((_, i) => (
-                                      <div key={i} className="w-full h-full bg-foreground rounded-[2px]" />
-                                    ))}
-                                  </div>
-                                </div>
-                                <div
-                                  style={background ? { background: background.hex.edgeColor } : {}}
-                                  className={`absolute top-2 -right-7 w-25 text-center ${!background ? 'bg-zinc-800' : ''} rotate-45 z-12`}
-                                >
-                                  <span className="text-xs text-white/80 font-medium">#{item.id}</span>
-                                </div>
-                                <div className="relative z-10 flex items-center justify-center">
-                                  {modelUrl ? (
-                                    <ProxiedImage
-                                      src={modelUrl}
-                                      alt={`${item.name} #${item.id}`}
-                                      className="w-2/3"
-                                    />
-                                  ) : (
-                                    <span className="text-3xl">🎁</span>
-                                  )}
-                                </div>
-                              </div>
+                              <span className="text-4xl leading-none">{item.emoji ?? '🎁'}</span>
+                              {!!item.star_count && (
+                                <span className="mt-1 text-xs text-muted-foreground font-medium">
+                                  ⭐ {item.star_count}
+                                </span>
+                              )}
                             </div>
                           )
-                        })}
-                      </div>
-                    )
-                  })()}
+                        }
+
+                        // ── Unique gift ───────────────────────────────────────
+                        const background = item.backdrop_name
+                          ? backgrounds?.find(bg => bg.name.toLowerCase() === item.backdrop_name!.toLowerCase())
+                          : undefined
+                        const modelUrl = item.name && item.model
+                          ? buildGiftModelUrl(item.name, item.model, IMG_SIZE.GRID)
+                          : null
+                        const patternUrl = item.name && item.pattern
+                          ? buildGiftPatternUrl(item.name, item.pattern, IMG_SIZE.THUMB)
+                          : null
+                        return (
+                          <div
+                            key={`u-${item.name}-${item.id}`}
+                            style={background
+                              ? { background: `radial-gradient(circle, ${background.hex.centerColor} 0%, ${background.hex.edgeColor} 100%)` }
+                              : {}}
+                            className={`relative aspect-square rounded-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform select-none overflow-hidden ${!background ? 'bg-card' : ''}`}
+                            onClick={() => {
+                              if (!selectedCell || !item.name) return
+                              useGiftStore.setState({
+                                selectedCell: {
+                                  ...selectedCell,
+                                  gift: { id: item.id, name: item.name, model: item.model, pattern: item.pattern, background },
+                                },
+                              })
+                              setConstructorMode('constructor')
+                            }}
+                          >
+                            <div className="relative h-full w-full flex items-center justify-center overflow-hidden rounded-lg">
+                              {patternUrl && <PatternBackground image={patternUrl} />}
+                              <div
+                                style={background ? { background: background.hex.edgeColor } : {}}
+                                className={`absolute top-2 -right-7 w-25 text-center ${!background ? 'bg-zinc-800' : ''} rotate-45 z-12`}
+                              >
+                                <span className="text-xs text-white/80 font-medium">#{item.id}</span>
+                              </div>
+                              <div className="relative z-10 flex items-center justify-center">
+                                {modelUrl ? (
+                                  <ProxiedImage
+                                    src={modelUrl}
+                                    alt={`${item.name} #${item.id}`}
+                                    className="w-2/3"
+                                  />
+                                ) : (
+                                  <span className="text-3xl">🎁</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 

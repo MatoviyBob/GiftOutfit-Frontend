@@ -64,7 +64,7 @@ export interface TelegramGiftItem {
   name: string
   model?: string
   pattern?: string
-  background?: import('@/types/gift').GiftBackground
+  backdrop_name?: string   // resolved to GiftBackground on the frontend using backgrounds list
   // regular gift fields
   emoji?: string
   star_count?: number
