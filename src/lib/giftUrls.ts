@@ -4,6 +4,14 @@
 
 import { PROXY_SERVER } from '@/config/env';
 
+/** Размеры изображений подарков */
+export const IMG_SIZE = {
+  THUMB: 'thumb',
+  GRID: 'grid',
+} as const;
+
+export type ImgSize = typeof IMG_SIZE[keyof typeof IMG_SIZE];
+
 const IMAGE_PROXY_SETTING_KEY = 'image-proxy-enabled'
 
 /** Нормализует Unicode-апостроф (U+2019) в ASCII (U+0027) до кодирования URL */
@@ -43,12 +51,12 @@ export const proxyLottieUrl = (url: string): string => {
   return `${PROXY_SERVER}?url=${encodeURIComponent(url).replace(/'/g, '%27')}`
 }
 
-export const buildGiftModelUrl = (giftName: string, model: string): string => {
+export const buildGiftModelUrl = (giftName: string, model: string, _size?: ImgSize): string => {
   const url = `https://cdn.changes.tg/gifts/models/${encodePathSegment(giftName)}/png/${encodePathSegment(model)}.png`
   return proxyImageUrl(url)
 }
 
-export const buildGiftPatternUrl = (giftName: string | null | undefined, pattern: string | null | undefined): string => {
+export const buildGiftPatternUrl = (giftName: string | null | undefined, pattern: string | null | undefined, _size?: ImgSize): string => {
   if (!giftName || !pattern) return ''
   const url = `https://cdn.changes.tg/gifts/patterns/${encodePathSegment(giftName)}/png/${encodePathSegment(pattern)}.png`
   return proxyImageUrl(url)
