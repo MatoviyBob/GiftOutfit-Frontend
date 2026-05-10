@@ -4,6 +4,7 @@ import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
 import telegramAnalytics from '@telegram-apps/analytics'
 import './index.css'
 import { App } from './components/App'
+import { ErrorBoundary } from './components/ui/ErrorBoundary'
 
 // Mock the environment in case, we are outside Telegram.
 import './mockEnv.ts'
@@ -52,15 +53,42 @@ try {
   }).then(() => {
     root.render(
       <StrictMode>
-        <TonConnectUIProvider manifestUrl={TON_MANIFEST_URL}>
-          <QueryClientProvider client={client}>
-            <App />
-          </QueryClientProvider>
-        </TonConnectUIProvider>
+        {/*
+          Top-level ErrorBoundary catches render errors anywhere in the tree
+          so a single bad component doesn't blank the whole screen. Individual
+          pages (IndexPage, ProfilePage) still wrap their own subtrees in
+          ErrorBoundary for finer-grained recovery.
+        */}
+        <ErrorBoundary>
+          <TonConnectUIProvider manifestUrl={TON_MANIFEST_URL}>
+            <QueryClientProvider client={client}>
+              <App />
+            </QueryClientProvider>
+          </TonConnectUIProvider>
+        </ErrorBoundary>
       </StrictMode>,
     );
   })
 } catch (e) {
-  console.error(e);
-  root.render(<div>Error</div>);
+  // Init-time failure (before React even mounts): render a minimal fallback
+  // with a reload action — better than a permanently-stuck "Error" string.
+  console.error('[init] fatal:', e);
+  root.render(
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', height: '100vh', gap: 12, padding: 24,
+      textAlign: 'center', fontFamily: 'system-ui, sans-serif',
+    }}>
+      <p>Не удалось запустить приложение.</p>
+      <button
+        onClick={() => window.location.reload()}
+        style={{
+          padding: '8px 16px', borderRadius: 8, border: '1px solid #888',
+          background: 'transparent', cursor: 'pointer',
+        }}
+      >
+        Перезагрузить
+      </button>
+    </div>
+  );
 }
