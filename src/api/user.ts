@@ -65,7 +65,8 @@ export interface TelegramGiftItem {
   name: string
   model?: string
   pattern?: string
-  backdrop_name?: string   // resolved to GiftBackground on the frontend using backgrounds list
+  backdrop_name?: string   // used for TON wallet gifts (CachedGift) — resolved via backgrounds list
+  background?: import('@/types/gift').GiftBackground  // used for Telegram profile gifts — colors come directly from Bot API
   // regular gift fields
   emoji?: string
   star_count?: number

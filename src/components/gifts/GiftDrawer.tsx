@@ -885,7 +885,9 @@ export const GiftDrawer: FC = () => {
                         }
 
                         // ── Unique gift ───────────────────────────────────────
-                        const background = findBackground(backgrounds, item.backdrop_name)
+                        // Telegram profile gifts already carry full background colors from Bot API;
+                        // TON wallet gifts only have backdrop_name → look up in backgrounds list
+                        const background = item.background ?? findBackground(backgrounds, item.backdrop_name)
                         const modelUrl = item.name && item.model
                           ? buildGiftModelUrl(item.name, item.model, IMG_SIZE.GRID)
                           : null
