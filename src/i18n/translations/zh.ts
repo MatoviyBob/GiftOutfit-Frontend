@@ -37,6 +37,8 @@ export const zh = {
     openingShare: '正在打开分享对话框...',
     profileLinkCopied: '个人主页链接已复制',
     profileLinkCopiedDesc: '将此链接分享给他人以查看您的主页',
+    referralLinkCopied: '推荐链接已复制',
+    referralLinkCopiedDesc: '分享链接邀请好友并获得奖励',
   },
   nav: {
     explore: '发现',
@@ -66,6 +68,10 @@ export const zh = {
     tonWalletConnect: '连接',
     tonWalletConnected: '断开',
     tonWalletConnecting: '连接中...',
+    referral: '推荐计划',
+    referralLink: '推荐链接',
+    referralCopy: '复制',
+    referralLinkLoading: '加载中...',
   },
   profile: {
     online: '在线',

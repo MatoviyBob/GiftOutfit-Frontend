@@ -43,6 +43,26 @@ function normalizeCollectionName(name: string): string {
   return name.replace(/\s+/g, '').toLowerCase()
 }
 
+// Нормализация имени фона для нечёткого сравнения (убираем пробелы, спецсимволы, lowercase)
+function normalizeBackdropName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+// Поиск фона по имени с fallback: точное → case-insensitive → нормализованное
+function findBackground(backgrounds: GiftBackground[] | undefined, backdropName: string | undefined): GiftBackground | undefined {
+  if (!backdropName || !backgrounds?.length) return undefined
+  // 1. Точное совпадение
+  let bg = backgrounds.find(b => b.name === backdropName)
+  if (bg) return bg
+  // 2. Case-insensitive
+  const lower = backdropName.toLowerCase()
+  bg = backgrounds.find(b => b.name.toLowerCase() === lower)
+  if (bg) return bg
+  // 3. Нормализованное (убираем пробелы и спецсимволы)
+  const norm = normalizeBackdropName(backdropName)
+  return backgrounds.find(b => normalizeBackdropName(b.name) === norm)
+}
+
 // Парсинг поискового запроса: извлечение названия коллекции и id
 function parseSearchQuery(query: string): { collectionQuery: string; giftId: number | null } {
   const trimmed = query.trim()
@@ -300,7 +320,7 @@ export const GiftDrawer: FC = () => {
       return backdrops.map((backdropName, id) => ({
         id,
         title: backdropName,
-        background: backgrounds?.find((bg: GiftBackground) => bg.name === backdropName),
+        background: findBackground(backgrounds, backdropName),
       }))
     }
     if (editingFieldKey === 'pattern' && collection) {
@@ -338,7 +358,7 @@ export const GiftDrawer: FC = () => {
       return backdrops.map((backdropName, id) => ({
         id,
         title: backdropName,
-        background: backgrounds?.find((bg: GiftBackground) => bg.name === backdropName),
+        background: findBackground(backgrounds, backdropName),
       }))
     }
     if (editingFieldKey === 'pattern' && collectionName) {
@@ -484,7 +504,7 @@ export const GiftDrawer: FC = () => {
     if (!isOwnProfile || !selectedCell) return
 
     // Находим background по имени backdrop
-    const background = backgrounds?.find((bg: GiftBackground) => bg.name === item.backdrop)
+    const background = findBackground(backgrounds, item.backdrop)
 
     // Устанавливаем все параметры подарка
     const updatedGift: Gift = {
@@ -570,7 +590,7 @@ export const GiftDrawer: FC = () => {
       if (!collection || !model || !backdrop || !selectedCell) return
       try {
         const result = await constructorState.fetchGift({ symbol: item.title, giftNumber: item.gift_number })
-        const background = backgrounds?.find((bg: GiftBackground) => bg.name === result.backdrop)
+        const background = findBackground(backgrounds, result.backdrop)
         const updatedGift: Gift = {
           id: result.gift_number,
           name: collection,
@@ -865,9 +885,7 @@ export const GiftDrawer: FC = () => {
                         }
 
                         // ── Unique gift ───────────────────────────────────────
-                        const background = item.backdrop_name
-                          ? backgrounds?.find(bg => bg.name.toLowerCase() === item.backdrop_name!.toLowerCase())
-                          : undefined
+                        const background = findBackground(backgrounds, item.backdrop_name)
                         const modelUrl = item.name && item.model
                           ? buildGiftModelUrl(item.name, item.model, IMG_SIZE.GRID)
                           : null

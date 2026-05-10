@@ -37,6 +37,8 @@ export const ru = {
     openingShare: 'Открываем диалог поделиться...',
     profileLinkCopied: 'Ссылка на профиль скопирована',
     profileLinkCopiedDesc: 'Поделитесь ссылкой, чтобы другие могли открыть ваш профиль',
+    referralLinkCopied: 'Реферальная ссылка скопирована',
+    referralLinkCopiedDesc: 'Поделитесь ссылкой, чтобы пригласить друзей',
   },
   nav: {
     explore: 'Обзор',
@@ -66,6 +68,10 @@ export const ru = {
     tonWalletConnect: 'Подключить',
     tonWalletConnected: 'Отключить',
     tonWalletConnecting: 'Подключение...',
+    referral: 'Реферальная программа',
+    referralLink: 'Реферальная ссылка',
+    referralCopy: 'Скопировать',
+    referralLinkLoading: 'Загрузка...',
   },
   profile: {
     online: 'в сети',

@@ -4,6 +4,7 @@ import type { Gift } from '@/types/gift';
 export interface MySettings {
   equipped_gift: Gift | null;
   favorite_palette: string[];
+  referral_code?: string | null;
 }
 
 export interface TelegramUser {

@@ -1,7 +1,7 @@
 import { type FC, useState } from 'react'
 import { Page } from '@/components/Page'
 import { Item, ItemActions, ItemContent, ItemGroup, ItemMedia, ItemTitle } from '@/components/ui/item'
-import { ChevronRightIcon, Megaphone, CreditCardIcon, MessageSquare, ImageIcon, Languages, Palette, Wallet } from 'lucide-react'
+import { ChevronRightIcon, Megaphone, CreditCardIcon, MessageSquare, ImageIcon, Languages, Palette, Wallet, Link2 } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { useSubscription } from '@/hooks/useSubscription'
 import { useImageProxySetting } from '@/hooks/useImageProxySetting'
@@ -10,6 +10,10 @@ import { FavoritePaletteDrawer } from '@/components/settings/FavoritePaletteDraw
 import { useFavoritePalette } from '@/hooks/useFavoritePalette'
 import { useTheme } from '@/components/theme-provider'
 import { useTonWalletConnect } from '@/hooks/useTonWallet'
+import { useQuery } from '@tanstack/react-query'
+import { getMySettings } from '@/api/user'
+import { generateReferralLink } from '@/lib/shareProfile'
+import { toast } from 'sonner'
 
 import { Link } from 'react-router-dom'
 import {
@@ -125,6 +129,20 @@ export const SettingsPage: FC = () => {
   const isDark = theme === 'dark'
   const { isConnected: isTonConnected, shortAddress, connect: connectTon, disconnect: disconnectTon } = useTonWalletConnect()
 
+  const { data: mySettings } = useQuery({
+    queryKey: ['my-settings'],
+    queryFn: getMySettings,
+  })
+  const referralCode = mySettings?.referral_code
+
+  const handleCopyReferralLink = () => {
+    if (!referralCode) return
+    const link = generateReferralLink(referralCode)
+    navigator.clipboard.writeText(link).then(() => {
+      toast(t('toast.referralLinkCopied'), { description: t('toast.referralLinkCopiedDesc') })
+    })
+  }
+
   const handleThemeToggle = () => {
     setTheme(isDark ? 'light' : 'dark')
   }
@@ -220,6 +238,30 @@ export const SettingsPage: FC = () => {
                     {isDark ? t('settings.themeDark') : t('settings.themeLight')}
                   </span>
                   <ThemeToggle isDark={isDark} onToggle={handleThemeToggle} />
+                </ItemActions>
+              </Item>
+            </ItemGroup>
+          </div>
+
+          {/* Referral */}
+          <div className="mb-4">
+            <div className="ml-4 mb-2 text-sm text-foreground/50">{t('settings.referral')}</div>
+            <ItemGroup className="bg-card rounded-xl overflow-hidden mt-0">
+              <Item size="sm">
+                <ItemMedia>
+                  <Link2 className="p-1 size-6 bg-[#f59e0b] rounded-sm text-white" />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>{t('settings.referralLink')}</ItemTitle>
+                </ItemContent>
+                <ItemActions>
+                  <button
+                    onClick={handleCopyReferralLink}
+                    disabled={!referralCode}
+                    className="px-3 py-1 rounded-full text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {referralCode ? t('settings.referralCopy') : t('settings.referralLinkLoading')}
+                  </button>
                 </ItemActions>
               </Item>
             </ItemGroup>

@@ -37,6 +37,8 @@ export const en = {
     openingShare: 'Opening share dialog...',
     profileLinkCopied: 'Profile link copied to clipboard',
     profileLinkCopiedDesc: 'Share this link with others to view your profile',
+    referralLinkCopied: 'Referral link copied',
+    referralLinkCopiedDesc: 'Share it to invite friends and earn rewards',
   },
   nav: {
     explore: 'Explore',
@@ -66,6 +68,10 @@ export const en = {
     tonWalletConnect: 'Connect',
     tonWalletConnected: 'Disconnect',
     tonWalletConnecting: 'Connecting...',
+    referral: 'Referral',
+    referralLink: 'Referral link',
+    referralCopy: 'Copy',
+    referralLinkLoading: 'Loading...',
   },
   profile: {
     online: 'online',

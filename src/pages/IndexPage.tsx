@@ -11,7 +11,7 @@ import { Settings, Share2 } from "lucide-react"
 import { Link } from 'react-router-dom';
 import { SubscriptionItem } from '@/components/subscription/SubscriptionItem'
 import { generateProfileShareLink } from '@/lib/shareProfile'
-import { trackProfileView, getUser, type TelegramUser } from '@/api/user'
+import { trackProfileView, getUser, getMySettings, type TelegramUser } from '@/api/user'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n'
 import { useQuery } from '@tanstack/react-query'
@@ -30,6 +30,14 @@ export const IndexPage: FC = () => {
     enabled: !!telegramUser?.id,
   })
 
+  // Загружаем настройки для получения реферального кода
+  const { data: mySettings } = useQuery({
+    queryKey: ['my-settings'],
+    queryFn: getMySettings,
+    enabled: !!telegramUser?.id,
+  })
+  const referralCode = mySettings?.referral_code
+
   // Отслеживаем просмотр своего профиля при загрузке
   useEffect(() => {
     // Отслеживаем только если пользователь загружен и еще не отслеживали просмотр
@@ -45,7 +53,7 @@ export const IndexPage: FC = () => {
   const handleShareProfile = async () => {
     if (!telegramUser?.id) return
 
-    const shareLink = generateProfileShareLink(telegramUser.id)
+    const shareLink = generateProfileShareLink(telegramUser.id, referralCode)
     
     // Пытаемся использовать Telegram WebApp API для шейринга
     const win = window as unknown as Record<string, unknown>
