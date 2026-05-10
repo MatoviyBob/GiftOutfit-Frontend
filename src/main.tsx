@@ -24,8 +24,8 @@ if (ANALYTICS_TOKEN && ANALYTICS_TOKEN !== 'YOUR_TOKEN_HERE' && ANALYTICS_APP_NA
       token: ANALYTICS_TOKEN,
       appName: ANALYTICS_APP_NAME,
     })
-    console.log('[analytics] init called for app:', ANALYTICS_APP_NAME)
   } catch (err) {
+    // Kept as console.error so it survives prod's pure-pruning of console.log.
     console.error('[analytics] init failed:', err)
   }
 } else {
@@ -38,14 +38,10 @@ const TON_MANIFEST_URL = `${window.location.origin}/tonconnect-manifest.json`
 const root = createRoot(document.getElementById('root')!)
 
 try {
-  console.log("Initialize root:", root)
   const launchParams = retrieveLaunchParams();
-  console.log("Received lp:", launchParams)
   const { tgWebAppPlatform: platform } = launchParams;
   const debug = (launchParams.tgWebAppStartParam || '').includes('platformer_debug')
     || import.meta.env.DEV;
-  
-  console.log("Received debug:", debug)
 
   // Configure all application dependencies.
   await init({

@@ -79,14 +79,15 @@ export async function init(options: {
   mountBackButton.ifAvailable();
   restoreInitData();
 
-  // Set initData globally for API client
-  // Get initDataRaw from SDK after initialization
+  // Set initData globally for API client.
+  // NOTE: never log initData / launchParams — they contain the HMAC `hash`
+  // and the `user` blob and act as a session token. Logging them in prod
+  // would expose them in DevTools (and any analytics that scrape console).
   const initData = initDataRaw();
   if (initData) {
-    console.log('Setting initData globally:', initData.substring(0, 50) + '...');
     setInitData(initData);
-  } else {
-    console.warn('initData not available during initialization, will be set by useApi hook');
+  } else if (import.meta.env.DEV) {
+    console.warn('[init] initData not available during initialization');
   }
 
   // Safe to call in any order.
