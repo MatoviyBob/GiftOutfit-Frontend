@@ -19,6 +19,7 @@ import {
   initDataRaw,
   requestFullscreen
 } from '@telegram-apps/sdk-react';
+import telegramAnalytics from '@telegram-apps/analytics';
 import { setInitData } from './api/apiClient';
   
 /**
@@ -30,6 +31,17 @@ export async function init(options: {
     mockForMacOS: boolean;
     platform: string;
 }): Promise<void> {
+  // Initialize Telegram Mini Apps Analytics.
+  // Token and appName are set via environment variables (VITE_ANALYTICS_TOKEN, VITE_ANALYTICS_APP_NAME).
+  const analyticsToken = import.meta.env.VITE_ANALYTICS_TOKEN;
+  const analyticsAppName = import.meta.env.VITE_ANALYTICS_APP_NAME;
+  if (analyticsToken && analyticsToken !== 'YOUR_TOKEN_HERE' && analyticsAppName) {
+    telegramAnalytics.init({
+      token: analyticsToken,
+      appName: analyticsAppName,
+    });
+  }
+
   // Set @telegram-apps/sdk-react debug mode and initialize it.
   setDebug(options.debug);
   initSDK();
