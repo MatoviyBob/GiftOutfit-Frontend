@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
+import telegramAnalytics from '@telegram-apps/analytics'
 import './index.css'
 import { App } from './components/App'
 
@@ -10,6 +11,26 @@ import { init } from './Init.ts'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TonConnectUIProvider } from '@tonconnect/ui-react'
+
+// Initialize Telegram Analytics SDK as early as possible — BEFORE retrieveLaunchParams
+// or any other SDK call that could throw. Previously this lived inside `init()` which
+// only runs after `retrieveLaunchParams()` succeeds; if that threw on certain clients,
+// the SDK never initialized and the dashboard reported "SDK not loaded".
+const ANALYTICS_TOKEN = import.meta.env.VITE_ANALYTICS_TOKEN as string | undefined
+const ANALYTICS_APP_NAME = import.meta.env.VITE_ANALYTICS_APP_NAME as string | undefined
+if (ANALYTICS_TOKEN && ANALYTICS_TOKEN !== 'YOUR_TOKEN_HERE' && ANALYTICS_APP_NAME) {
+  try {
+    telegramAnalytics.init({
+      token: ANALYTICS_TOKEN,
+      appName: ANALYTICS_APP_NAME,
+    })
+    console.log('[analytics] init called for app:', ANALYTICS_APP_NAME)
+  } catch (err) {
+    console.error('[analytics] init failed:', err)
+  }
+} else {
+  console.warn('[analytics] skipped — VITE_ANALYTICS_TOKEN or VITE_ANALYTICS_APP_NAME missing')
+}
 
 const client = new QueryClient()
 const TON_MANIFEST_URL = `${window.location.origin}/tonconnect-manifest.json`
