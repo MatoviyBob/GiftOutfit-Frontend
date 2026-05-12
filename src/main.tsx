@@ -25,44 +25,12 @@ if (ANALYTICS_TOKEN && ANALYTICS_TOKEN !== 'YOUR_TOKEN_HERE' && ANALYTICS_APP_NA
       token: ANALYTICS_TOKEN,
       appName: ANALYTICS_APP_NAME,
     })
-    console.warn('[analytics-probe] SDK init() returned without throwing')
   } catch (err) {
     // Kept as console.error so it survives prod's pure-pruning of console.log.
-    console.error('[analytics-probe] SDK init() threw:', err)
+    console.error('[analytics] init failed:', err)
   }
-
-  // ── TEMP DIAGNOSTIC (remove once dashboard goes Active) ───────────────────
-  // The TON Builders dashboard still shows "Waiting for SDK" despite a valid
-  // token and a deployed init() call. We don't have a debug mode in the
-  // obfuscated SDK, so probe the upstream flow endpoint ourselves to confirm
-  // network reachability + CSP do not block analytics traffic from the actual
-  // browser session. Output is intentionally console.warn / console.error so
-  // it survives prod's drop_console=log/info/debug pruning.
-  fetch('https://flow.prod.innerworks.me/flow', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'TGA-Auth-Token': ANALYTICS_TOKEN,
-    },
-    body: '{}',
-  })
-    .then(async (r) => {
-      const body = await r.text()
-      console.warn('[analytics-probe] flow POST status:', r.status, 'body:', body.slice(0, 200))
-    })
-    .catch((err) => {
-      // A network/CSP/CORS failure ends up here. The .message often contains
-      // the actual cause (e.g. "Failed to fetch" hides a CSP refusal in some
-      // browsers — check the matching error in DevTools "Issues" panel).
-      console.error('[analytics-probe] flow POST failed:', err && err.message, err)
-    })
-
-  // Catch any async SDK errors that would otherwise be invisible
-  window.addEventListener('unhandledrejection', (event) => {
-    console.warn('[analytics-probe] unhandled promise rejection:', event.reason)
-  })
 } else {
-  console.warn('[analytics-probe] skipped — VITE_ANALYTICS_TOKEN or VITE_ANALYTICS_APP_NAME missing')
+  console.warn('[analytics] skipped — VITE_ANALYTICS_TOKEN or VITE_ANALYTICS_APP_NAME missing')
 }
 
 const client = new QueryClient()
