@@ -124,7 +124,7 @@ export const IndexPage: FC = () => {
 
         <ProfileCard user={displayUser} isOwnProfile={true} />
 
-        <ProfileTabs user={displayUser} isOwnProfile={true} />
+        {displayUser && <ProfileTabs user={displayUser} isOwnProfile={true} />}
 
         <div className="py-5 px-4 text-foreground/50 text-center text-sm space-y-1">
           <div>
