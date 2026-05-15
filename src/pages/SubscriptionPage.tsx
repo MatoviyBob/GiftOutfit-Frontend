@@ -21,7 +21,6 @@ import { createInvoice, type Invoice } from '@/api/payment'
 
 import { invoice } from '@telegram-apps/sdk-react'
 import { useSubscription, isSubscriptionActive } from '@/hooks/useSubscription'
-import useApi from '@/api/hooks/useApi'
 import { getSubscriptionPlans, type SubscriptionPlan } from '@/api/subscription'
 import { proxyImageUrl } from '@/lib/giftUrls'
 import { ProxiedImage } from '@/components/ui/ProxiedImage'
@@ -58,7 +57,6 @@ export const SubscriptionPage: FC = () => {
 //   const lp = useMemo(() => retrieveLaunchParams(), []);
 //   const user = lp.tgWebAppData?.user
 
-  const api = useApi();
   const { data: subscription } = useSubscription();
   const hasActiveSubscription = isSubscriptionActive(subscription);
 

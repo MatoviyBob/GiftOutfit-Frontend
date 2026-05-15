@@ -7,6 +7,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { useBackgrounds } from '@/hooks/useGiftQueries'
 import { useFavoritePalette, MAX_FAVORITES } from '@/hooks/useFavoritePalette'
 import { useTranslation } from '@/i18n'
+import type { GiftBackground } from '@/types/gift'
 
 type Props = {
   open: boolean
@@ -25,16 +26,16 @@ export const FavoritePaletteDrawer: FC<Props> = ({ open, onOpenChange }) => {
   const sortedBackgrounds = useMemo(() => {
     if (!backgrounds) return []
     const filtered = query
-      ? backgrounds.filter((bg) => bg.name.toLowerCase().includes(query.toLowerCase()))
+      ? backgrounds.filter((bg: GiftBackground) => bg.name.toLowerCase().includes(query.toLowerCase()))
       : backgrounds
 
     const favs = filtered
-      .filter((bg) => isFavorite(bg.name))
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .filter((bg: GiftBackground) => isFavorite(bg.name))
+      .sort((a: GiftBackground, b: GiftBackground) => a.name.localeCompare(b.name))
 
     const rest = filtered
-      .filter((bg) => !isFavorite(bg.name))
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .filter((bg: GiftBackground) => !isFavorite(bg.name))
+      .sort((a: GiftBackground, b: GiftBackground) => a.name.localeCompare(b.name))
 
     return [...favs, ...rest]
   }, [backgrounds, query, favorites]) // eslint-disable-line react-hooks/exhaustive-deps

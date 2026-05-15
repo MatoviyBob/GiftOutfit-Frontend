@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { updateBio } from '@/api/user'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import useApi from '@/api/hooks/useApi'
 import { useTranslation } from '@/i18n'
 
 type EditBioDialogProps = {
@@ -17,7 +16,6 @@ type EditBioDialogProps = {
 
 export const EditBioDialog = ({ open, onOpenChange, currentBio = '', onBioUpdated }: EditBioDialogProps) => {
   const { t } = useTranslation()
-  const api = useApi()
 
   const [bio, setBio] = useState('')
 

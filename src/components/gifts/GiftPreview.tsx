@@ -8,7 +8,6 @@ import { useTranslation } from '@/i18n'
 import { updateEquippedGift, getMySettings, type MySettings } from '@/api/user'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
 
 type GiftPreviewProps = {
   gift: Gift | null | undefined
@@ -18,7 +17,6 @@ type GiftPreviewProps = {
 export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const lp = retrieveLaunchParams()
 
   // Read equipped gift from query cache — same pattern as grids
   const { data: mySettings } = useQuery({

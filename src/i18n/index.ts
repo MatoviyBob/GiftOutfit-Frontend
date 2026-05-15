@@ -7,7 +7,16 @@ export type Locale = 'en' | 'ru' | 'zh'
 
 export type Translations = typeof en
 
-const translations: Record<Locale, Translations> = { en, ru, zh: zh as unknown as Translations }
+// `en` is declared `as const`, so `Translations` (= typeof en) carries string
+// LITERAL types ("Error", "Close", ...). `ru` / `zh` have different literals
+// for the same keys, so they don't structurally match without widening.
+// The runtime lookup (`getNested`) is string-based and tolerates this, so an
+// `unknown` cast is the pragmatic fix — same pattern already used for `zh`.
+const translations: Record<Locale, Translations> = {
+  en,
+  ru: ru as unknown as Translations,
+  zh: zh as unknown as Translations,
+}
 
 const STORAGE_KEY = 'app-locale'
 
@@ -22,13 +31,6 @@ function setStoredLocale(locale: Locale) {
   localStorage.setItem(STORAGE_KEY, locale)
 }
 
-type GetByPath<T, P extends string> = P extends `${infer K}.${infer Rest}`
-  ? K extends keyof T
-    ? GetByPath<T[K], Rest>
-    : never
-  : P extends keyof T
-    ? T[P]
-    : never
 
 function getNested(obj: Record<string, unknown>, path: string): string | undefined {
   const parts = path.split('.')

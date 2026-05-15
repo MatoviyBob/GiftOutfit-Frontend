@@ -29,7 +29,6 @@ export function useConstructorState({
   const collection = selectedGift?.name ?? null
   const model = selectedGift?.model ?? null
   const backdrop = selectedGift?.background?.name ?? null
-  const symbol = selectedGift?.pattern ?? null
 
   const collectionsQuery = useQuery({
     queryKey: ['constructor', 'collections'],
