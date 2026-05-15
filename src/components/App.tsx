@@ -82,7 +82,10 @@ export function App() {
   // hands the app fresh init_data.
   useEffect(() => {
     const onAuthExpired = () => {
+      // Fixed `id` so a burst of 401s (React Query retries every failed
+      // query ~3x) collapses into a single toast instead of stacking.
       toast.error('Сессия устарела. Перезапустите приложение.', {
+        id: 'auth-expired',
         duration: 10000,
         action: { label: 'Перезагрузить', onClick: () => window.location.reload() },
       })
