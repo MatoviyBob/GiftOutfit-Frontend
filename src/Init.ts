@@ -34,8 +34,14 @@ export async function init(options: {
     platform: string;
 }): Promise<void> {
   // Set @telegram-apps/sdk-react debug mode and initialize it.
+  // initSDK() can throw on unusual clients (malformed environment); guard it
+  // so a failure here doesn't abort the whole init() and blank the screen.
   setDebug(options.debug);
-  initSDK();
+  try {
+    initSDK();
+  } catch (err) {
+    console.error('[init] initSDK() failed:', err);
+  }
 
   
   // Eruda disabled in production

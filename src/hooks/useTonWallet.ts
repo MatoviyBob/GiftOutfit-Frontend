@@ -32,8 +32,11 @@ export const useTonWalletConnect = () => {
   useEffect(() => {
     if (prevAddressRef.current === walletAddress) return;
     prevAddressRef.current = walletAddress;
-    // Fire-and-forget — ignore errors so wallet UI stays responsive.
-    updateTonWallet(walletAddress).catch(() => undefined);
+    // Fire-and-forget — keep the wallet UI responsive even if the sync fails,
+    // but log the failure so a silently-broken /me/ton-wallet is diagnosable.
+    updateTonWallet(walletAddress).catch((err) => {
+      console.error('[useTonWallet] failed to sync wallet address to server:', err);
+    });
   }, [walletAddress]);
 
   return {

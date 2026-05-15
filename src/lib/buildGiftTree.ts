@@ -1,3 +1,5 @@
+import type { ConstructorGiftResult } from '@/api/constructor'
+
 export type GiftTree = {
   [model: string]: {
     [backdrop: string]: {
@@ -9,8 +11,8 @@ export type GiftTree = {
     }
   }
 }
-  
-export const buildGiftTree = (gifts: any[]): GiftTree => {
+
+export const buildGiftTree = (gifts: ConstructorGiftResult[]): GiftTree => {
   const tree: GiftTree = {}
 
   for (const g of gifts) {

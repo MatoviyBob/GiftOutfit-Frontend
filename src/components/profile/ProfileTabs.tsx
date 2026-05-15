@@ -5,8 +5,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 // import { getGrids } from '@/api/gifts';
 import ProfileGroupTabs from './ProfileGroupTabs'
 import { useTranslation } from '@/i18n'
+import type { TelegramUser } from '@/api/user'
 
-export default function ProfileTabs({ user, isOwnProfile = false }: { user: any; isOwnProfile?: boolean }) {
+export default function ProfileTabs({ user, isOwnProfile = false }: { user: TelegramUser; isOwnProfile?: boolean }) {
     const { t } = useTranslation()
     const [activeTab, setActiveTab] = useState('gifts')
 

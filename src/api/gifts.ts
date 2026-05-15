@@ -1,5 +1,5 @@
 import apiClient from './apiClient';
-import type { Gift } from '@/types/gift';
+import type { Gift, GiftBackground } from '@/types/gift';
 
 // Тип для ячейки с информацией о закреплении
 export interface Cell {
@@ -18,6 +18,35 @@ export interface Grid {
     id: number;
     name: string;
     rows: GridRow[];
+}
+
+// ── Raw API shapes (before normalization in getGrids) ────────────────────────
+// The backend returns a cell in one of three forms:
+//   1. null                                  → empty cell
+//   2. { gift, pinned, pinned_position }      → already-wrapped Cell
+//   3. a flat Gift object with pinned fields  → legacy shape
+// RawCell models all three with optional fields rather than `any`.
+interface RawCell {
+    gift?: Gift | null;
+    pinned?: boolean;
+    pinned_position?: number | null;
+    // flat-gift variant:
+    id?: number;
+    name?: string;
+    model?: string;
+    background?: GiftBackground;
+    pattern?: string;
+}
+
+interface RawRow {
+    row_index: number;
+    cells: (RawCell | null)[];
+}
+
+interface RawGrid {
+    id: number;
+    name: string;
+    rows: RawRow[];
 }
 
 export const createGrid = async (name: string) => {
@@ -42,14 +71,14 @@ export const reorderGrids = async (ids: number[]) => {
 
 // GET все гриды с их строками и ячейками
 export const getGrids = async (userId: number): Promise<Grid[]> => {
-    const { data } = await apiClient.get(`/users/${userId}/grids`); // пример user_id
-    // Если нужно, можно трансформировать данные сразу в нужный формат
-    return data.map((grid: any) => ({
+    const { data } = await apiClient.get<RawGrid[]>(`/users/${userId}/grids`);
+    // Нормализуем разные формы ячеек из бэкенда в единый Cell
+    return data.map((grid: RawGrid) => ({
       id: grid.id,
       name: grid.name,
-      rows: grid.rows.map((row: any) => ({
+      rows: grid.rows.map((row: RawRow) => ({
         row_index: row.row_index,
-        cells: row.cells.map((cell: any): Cell => {
+        cells: row.cells.map((cell: RawCell | null): Cell => {
           // Если cell - null, возвращаем пустую ячейку
           if (!cell) {
             return {
@@ -73,10 +102,12 @@ export const getGrids = async (userId: number): Promise<Grid[]> => {
           const pinned = cell.pinned === true || cell.pinned === false ? cell.pinned : false;
           const pinnedPosition = cell.pinned_position !== undefined ? cell.pinned_position : null;
           
-          // Создаем чистый объект подарка без полей pinned/pinned_position
+          // Создаем чистый объект подарка без полей pinned/pinned_position.
+          // id/name fall back to 0/'' — the flat-gift variant always carries
+          // them in practice, but the raw type marks them optional.
           const gift: Gift = {
-            id: cell.id,
-            name: cell.name,
+            id: cell.id ?? 0,
+            name: cell.name ?? '',
             model: cell.model,
             background: cell.background,
             pattern: cell.pattern

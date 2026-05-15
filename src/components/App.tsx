@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, Suspense } from 'react'
-import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+import { useState, useEffect, Suspense } from 'react'
+import { HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useSignal, isMiniAppDark, retrieveLaunchParams } from '@telegram-apps/sdk-react'
+import { toast } from 'sonner'
 import { Layout } from './Layout'
 
 import { ThemeProvider } from '@/components/theme-provider'
@@ -8,15 +9,14 @@ import { I18nProvider } from '@/i18n'
 import { routes } from '@/navigation/routes'
 import { LoadingScreen } from './LoadingScreen'
 import { parseProfileUserIdFromStartParam } from '@/lib/parseDeeplink'
+import { AUTH_EXPIRED_EVENT } from '@/api/apiClient'
 // import { parseProfileUserIdFromStartParam } from '@/lib/parseDeeplink'
 
 function AppRoutes() {
   const navigate = useNavigate();
-  const location = useLocation();
   const launchParams = retrieveLaunchParams();
   // const currentUser = launchParams.tgWebAppData?.user;
   const startParam = launchParams.tgWebAppStartParam;
-  // const hasProcessedNavigation = useRef(false);
 
   useEffect(() => {
     if (startParam) {
@@ -76,6 +76,20 @@ function AppRoutes() {
 export function App() {
   const [isLoading, setIsLoading] = useState(true)
   const isDark = useSignal(isMiniAppDark);
+
+  // Surface expired-session (401) failures to the user. The backend rejects
+  // init_data older than 24h; the only fix is a full reload so Telegram
+  // hands the app fresh init_data.
+  useEffect(() => {
+    const onAuthExpired = () => {
+      toast.error('Сессия устарела. Перезапустите приложение.', {
+        duration: 10000,
+        action: { label: 'Перезагрузить', onClick: () => window.location.reload() },
+      })
+    }
+    window.addEventListener(AUTH_EXPIRED_EVENT, onAuthExpired)
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onAuthExpired)
+  }, [])
 
   return (
     <>
