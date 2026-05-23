@@ -26,8 +26,14 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
   })
   const equippedGift = mySettings?.equipped_gift ?? null
 
+  // Fixed height for the preview area. Previously this was `min-h-[200px]`,
+  // which let the container grow with the rendered image's natural dimensions —
+  // and since each model image from cdn.changes.tg has its own intrinsic size,
+  // picking a new attribute resized the preview and pushed the constructor
+  // rows below up/down ("прыгает изображение и конструктор"). A fixed height
+  // keeps the layout stable across attribute changes.
   if (!gift) return (
-    <div className="relative min-h-[200px] text-white overflow-hidden bg-muted"></div>
+    <div className="relative h-72 text-white overflow-hidden bg-muted"></div>
   )
 
   const backgroundStyle = gift.background
@@ -46,7 +52,7 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
 
   return (
     <div
-      className="relative min-h-[200px] text-white overflow-hidden bg-muted"
+      className="relative h-72 text-white overflow-hidden bg-muted"
       style={backgroundStyle}
     >
       {hasPattern && patternUrl && <PatternBackground image={patternUrl} />}
@@ -105,8 +111,15 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
       </div>
 
       <div className="relative h-full z-10 flex items-center justify-center">
-        <div className="h-5/8 w-full max-w-xs rounded-3xl flex items-center justify-center overflow-hidden">
-          <GiftAnimation gift={gift} className="h-full" fallbackSrc={modelUrl} />
+        {/*
+          `h-3/5` (60%) replaces the previous `h-5/8` — Tailwind's default
+          theme has no `5/8` fraction utility, so the rule was dropped and
+          the inner box collapsed to the image's intrinsic height (causing
+          the jump). 60% of the now-fixed `h-72` (~173px) keeps the original
+          visual proportion.
+        */}
+        <div className="h-3/5 w-full max-w-xs rounded-3xl flex items-center justify-center overflow-hidden">
+          <GiftAnimation gift={gift} className="h-full w-full" fallbackSrc={modelUrl} />
         </div>
 
         {telegramUrl && (

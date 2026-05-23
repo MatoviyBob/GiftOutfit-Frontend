@@ -74,12 +74,18 @@ export const GiftFieldButton: FC<GiftFieldButtonProps> = ({
       <span className="flex-1 pl-3 py-3 bg-card text-sm text-card-foreground/90">
         {label}
       </span>
-      <div className="flex flex-2 px-5 py-3 justify-between items-center gap-2">
-        <span className="text-sm font-medium text-foreground">{value}</span>
+      <div className="flex flex-2 min-w-0 px-5 py-3 justify-between items-center gap-2">
+        {/*
+          `truncate` + `min-w-0` on the flex parent keep long collection /
+          model / backdrop names on a single line. Without these, picking an
+          attribute with a long name wrapped the row to two lines and made
+          the constructor list shift up/down on every selection.
+        */}
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{value}</span>
         {isLoading ? (
-          <Spinner className="text-primary" />
+          <Spinner className="shrink-0 text-primary" />
         ) : (
-          <ChevronDown className="h-4 w-4 text-foreground/60" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-foreground/60" />
         )}
       </div>
     </button>
