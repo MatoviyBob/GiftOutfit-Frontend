@@ -2,7 +2,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { GiftGrid } from '../gifts/GiftGrid'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getGrids, reorderGrids, type Grid } from '@/api/gifts';
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { AddAlbumDialog } from '../gifts/AddAlbumDialog';
 import { RenameAlbumDialog } from '../gifts/RenameAlbumDialog';
 import { useHasActiveSubscription } from '@/hooks/useSubscription';
@@ -234,10 +234,10 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
   // ── Drag-and-drop for tabs ─────────────────────────────────────────────────
   // Items are `disabled` when !isEditMode, so sensors don't interfere with
   // normal touch-scroll even though both PointerSensor and TouchSensor are active.
-  const sensors = useMemo(() => useSensors(
+  const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
-  ), []) // sensors are stable for the lifetime of the tabs component
+  )
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event

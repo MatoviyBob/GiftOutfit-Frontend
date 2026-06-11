@@ -1,4 +1,4 @@
-import { type FC, memo, useCallback, useMemo } from "react";
+import { type FC, memo, useCallback } from "react";
 import { useState } from "react";
 import { popup, retrieveLaunchParams } from "@telegram-apps/sdk-react";
 import { toast } from "sonner"
@@ -132,11 +132,11 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
   const lp = retrieveLaunchParams();
   const userId = lp.tgWebAppData?.user?.id;
 
-  const sensors = useMemo(() => useSensors(
+  const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
     useSensor(KeyboardSensor)
-  ), []); // stable sensors reduce re-renders during drag sessions on mobile
+  );
 
   // ── Row management mutations ──────────────────────────────────────────────────
   const addRowMutation = useMutation({
