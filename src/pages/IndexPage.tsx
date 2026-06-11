@@ -3,7 +3,7 @@ import { useMemo, useEffect, useRef, lazy, Suspense } from 'react'
 import { Page } from '@/components/Page'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 
-const GiftDrawer = lazy(() => import('@/components/gifts/GiftDrawer'))
+const GiftDrawer = lazy(() => import('@/components/gifts/GiftDrawer').then(m => ({ default: m.GiftDrawer })))
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
 import { ProfileHeader } from '@/components/profile/ProfileHeader'
 import { ProfileCard } from '@/components/profile/ProfileCard'

@@ -160,7 +160,7 @@ export const GiftDrawer: FC = () => {
     staleTime: 1000 * 60 * 5,
   })
 
-  const isMyGiftsLoading = isMyGiftsMode && (cachedGiftsQuery.isLoading || telegramGiftsQuery.isLoading)
+
 
   // Merge Telegram profile gifts + TON wallet gifts, deduplicate unique gifts by name:id
   const mergedGifts = useMemo((): TelegramGiftItem[] => {

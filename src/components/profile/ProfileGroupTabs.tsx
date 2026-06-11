@@ -2,8 +2,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { GiftGrid } from '../gifts/GiftGrid'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getGrids, reorderGrids, type Grid } from '@/api/gifts';
-import { Spinner } from '../ui/spinner';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { AddAlbumDialog } from '../gifts/AddAlbumDialog';
 import { RenameAlbumDialog } from '../gifts/RenameAlbumDialog';
 import { useHasActiveSubscription } from '@/hooks/useSubscription';

@@ -8,7 +8,7 @@ import type { Gift } from '@/types/gift';
 import { Button } from '../ui/button';
 import { useGiftStore } from '@/stores/giftStore';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { addRow, deleteLastRow, deleteGrid, updateGiftCell, batchUpdateCells, type Grid, type Cell } from '@/api/gifts';
+import { addRow, deleteLastRow, deleteGrid, batchUpdateCells, type Grid, type Cell } from '@/api/gifts';
 import {
   DndContext,
   closestCenter,
