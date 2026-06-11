@@ -1,10 +1,12 @@
 import type { FC } from 'react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, lazy, Suspense } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Page } from '@/components/Page'
-import { GiftDrawer } from '@/components/gifts/GiftDrawer'
+import { getGrids } from '@/api/gifts'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+
+const GiftDrawer = lazy(() => import('@/components/gifts/GiftDrawer'))
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
 import { ProfileHeader } from '@/components/profile/ProfileHeader'
 import { ProfileCard } from '@/components/profile/ProfileCard'
@@ -22,11 +24,23 @@ export const ProfilePage: FC = () => {
   const userIdNumber = userId ? parseInt(userId, 10) : null
   const currentUser = retrieveLaunchParams().tgWebAppData?.user
 
+  const queryClient = useQueryClient()
+
   const { data: user, isLoading, error } = useQuery({
     queryKey: ['user', userIdNumber],
     queryFn: () => getUser(userIdNumber!),
     enabled: !!userIdNumber && !isNaN(userIdNumber),
   })
+
+  // Prefetch grids for the viewed profile (makes album tabs + drawer snappier)
+  useEffect(() => {
+    if (userIdNumber) {
+      queryClient.prefetchQuery({
+        queryKey: ['grids', userIdNumber],
+        queryFn: () => getGrids(userIdNumber),
+      })
+    }
+  }, [userIdNumber, queryClient])
 
   // Если это собственный профиль, перенаправляем на /portfolio
   const isOwnProfile = currentUser && userIdNumber === currentUser.id
@@ -120,7 +134,9 @@ export const ProfilePage: FC = () => {
         </div>
 
         <ErrorBoundary>
-          <GiftDrawer />
+          <Suspense fallback={null}>
+            <GiftDrawer />
+          </Suspense>
         </ErrorBoundary>
       </div>
     </Page>

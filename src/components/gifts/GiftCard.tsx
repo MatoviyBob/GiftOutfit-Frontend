@@ -11,6 +11,7 @@ type Props = {
   isPinned?: boolean
   isOwnProfile?: boolean
   onClick: () => void
+  priority?: boolean   // for first visible cells → eager load
 }
 
 export const GiftCard: FC<Props> = memo(({
@@ -18,6 +19,7 @@ export const GiftCard: FC<Props> = memo(({
   isPinned,
   isOwnProfile = true,
   onClick,
+  priority = false,
 }) => {
   const isEmpty = !gift
   const isClickable = !isEmpty || isOwnProfile
@@ -63,7 +65,11 @@ export const GiftCard: FC<Props> = memo(({
           </div>
 
           <div className="relative z-10 flex items-center justify-center text-3xl">
-            <ProxiedImage src={buildGiftModelUrl(gift.name, gift.model || 'Original')} className="w-2/3 h-full/2" />
+            <ProxiedImage 
+              src={buildGiftModelUrl(gift.name, gift.model || 'Original')} 
+              className="w-2/3 h-full/2" 
+              loading={priority ? 'eager' : 'lazy'}
+            />
             {/* <GiftAnimation gift={gift} autoplay={false} className="w-2/3 h-full/2" /> */}
           </div>
         </> || (

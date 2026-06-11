@@ -5,6 +5,7 @@ export interface MySettings {
   equipped_gift: Gift | null;
   favorite_palette: string[];
   referral_code?: string | null;
+  album_order?: number[];  // persisted album reorder for correct display after reload
 }
 
 export interface TelegramUser {

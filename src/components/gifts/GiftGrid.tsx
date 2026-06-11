@@ -1,4 +1,4 @@
-import { type FC, memo, useCallback } from "react";
+import { type FC, memo, useCallback, useMemo } from "react";
 import { useState } from "react";
 import { popup, retrieveLaunchParams } from "@telegram-apps/sdk-react";
 import { toast } from "sonner"
@@ -8,7 +8,7 @@ import type { Gift } from '@/types/gift';
 import { Button } from '../ui/button';
 import { useGiftStore } from '@/stores/giftStore';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { addRow, deleteLastRow, deleteGrid, updateGiftCell, type Grid, type Cell } from '@/api/gifts';
+import { addRow, deleteLastRow, deleteGrid, updateGiftCell, batchUpdateCells, type Grid, type Cell } from '@/api/gifts';
 import {
   DndContext,
   closestCenter,
@@ -90,9 +90,10 @@ type DraggableCellProps = {
   isOwnProfile: boolean
   onCellClick: (rowIndex: number, cellIndex: number, gift: Cell['gift']) => void
   isOver?: boolean
+  priority?: boolean
 }
 
-const DraggableCell: FC<DraggableCellProps> = memo(({ id, cell, onCellClick, isOver, isOwnProfile, rowIndex, cellIndex }) => {
+const DraggableCell: FC<DraggableCellProps> = memo(({ id, cell, onCellClick, isOver, isOwnProfile, rowIndex, cellIndex, priority = false }) => {
   const gift = cell.gift
   const isPinned = cell.pinned || false
 
@@ -114,6 +115,7 @@ const DraggableCell: FC<DraggableCellProps> = memo(({ id, cell, onCellClick, isO
           isPinned={isPinned}
           isOwnProfile={isOwnProfile}
           onClick={() => onCellClick(rowIndex, cellIndex, gift)}
+          priority={priority}
         />
       </div>
     </div>
@@ -130,11 +132,11 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
   const lp = retrieveLaunchParams();
   const userId = lp.tgWebAppData?.user?.id;
 
-  const sensors = useSensors(
+  const sensors = useMemo(() => useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
     useSensor(KeyboardSensor)
-  );
+  ), []); // stable sensors reduce re-renders during drag sessions on mobile
 
   // ── Row management mutations ──────────────────────────────────────────────────
   const addRowMutation = useMutation({
@@ -160,13 +162,24 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
 
   const clearGridMutation = useMutation({
     mutationFn: async () => {
+      // Build all the cells we need to clear in the main 3 rows
+      const updates: Array<{ row_index: number; cell_index: number; gift: Gift | null }> = []
       for (let rowIndex = 0; rowIndex < Math.min(rows.length, 3); rowIndex++) {
         for (let cellIndex = 0; cellIndex < COLS; cellIndex++) {
-          await updateGiftCell(gridId, rowIndex, cellIndex, null)
+          updates.push({ row_index: rowIndex, cell_index: cellIndex, gift: null })
         }
       }
+
+      // Send everything in a single fast batch request
+      if (updates.length > 0) {
+        await batchUpdateCells(gridId, updates)
+      }
+
+      // Remove any extra rows beyond the default 3 (these are cheap single calls)
       const extraRows = rows.length - 3
-      for (let i = 0; i < extraRows; i++) await deleteLastRow(gridId)
+      for (let i = 0; i < extraRows; i++) {
+        await deleteLastRow(gridId)
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['grids', userId] })
@@ -178,7 +191,8 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
   // ── Insert mutation (replaces swap) ──────────────────────────────────────────
   const insertGiftMutation = useMutation({
     mutationFn: async ({ newFlat, oldFlat }: { newFlat: Cell[]; oldFlat: Cell[] }) => {
-      // Only update cells that actually changed
+      // Collect only the cells that actually changed into a single batch
+      const updates: Array<{ row_index: number; cell_index: number; gift: Gift | null }> = []
       for (let i = 0; i < newFlat.length; i++) {
         const n = newFlat[i];
         const o = oldFlat[i];
@@ -188,8 +202,12 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
         if (changed) {
           const rowIdx = Math.floor(i / COLS);
           const cellIdx = i % COLS;
-          await updateGiftCell(gridId, rowIdx, cellIdx, n?.gift ?? null);
+          updates.push({ row_index: rowIdx, cell_index: cellIdx, gift: n?.gift ?? null })
         }
+      }
+
+      if (updates.length > 0) {
+        await batchUpdateCells(gridId, updates)
       }
     },
     onMutate: async ({ newFlat }) => {
@@ -343,6 +361,7 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
 
               {row.map((cell, cellIndex) => {
                 const cellId = createCellId(rowIndex, cellIndex);
+                const isPriority = isMainAlbum && rowIndex === 0 && cellIndex < 3;
                 return (
                   <DraggableCell
                     key={cellId}
@@ -353,6 +372,7 @@ export const GiftGrid: FC<GiftGridProps> = ({ gridId, rows, isMainAlbum = false,
                     isOwnProfile={isOwnProfile}
                     isOver={overId === cellId && activeId !== cellId}
                     onCellClick={handleCellClick}
+                    priority={isPriority}
                   />
                 );
               })}

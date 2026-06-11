@@ -166,6 +166,17 @@ export const updateGiftCell = async (
     )
 }
 
+/**
+ * Batch update many cells in ONE request (huge perf win for clear album and complex drag).
+ * Send only the cells that actually changed.
+ */
+export const batchUpdateCells = async (
+    gridId: number,
+    updates: Array<{ row_index: number; cell_index: number; gift: Gift | null }>
+) => {
+    return await apiClient.post(`/grids/${gridId}/cells/batch`, { updates })
+}
+
 // POST атомарный свап двух ячеек
 export const swapGiftCells = async (
     gridId: number,

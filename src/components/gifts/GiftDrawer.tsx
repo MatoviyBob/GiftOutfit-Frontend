@@ -160,6 +160,8 @@ export const GiftDrawer: FC = () => {
     staleTime: 1000 * 60 * 5,
   })
 
+  const isMyGiftsLoading = isMyGiftsMode && (cachedGiftsQuery.isLoading || telegramGiftsQuery.isLoading)
+
   // Merge Telegram profile gifts + TON wallet gifts, deduplicate unique gifts by name:id
   const mergedGifts = useMemo((): TelegramGiftItem[] => {
     const tgItems: TelegramGiftItem[] = telegramGiftsQuery.data?.gifts ?? []
@@ -194,11 +196,14 @@ export const GiftDrawer: FC = () => {
     return result
   }, [telegramGiftsQuery.data, cachedGiftsQuery.data])
 
-  // Sync mutation — re-scans TON wallet and updates server cache
+  // Sync mutation — re-scans TON wallet and updates server cache (fast path for user)
   const syncMutation = useMutation({
     mutationFn: syncMyGifts,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['my-cached-gifts'] })
+      if (data?.count != null) {
+        toast.success(`Synced ${data.count} gifts from wallet`)
+      }
     },
   })
 
@@ -823,7 +828,7 @@ export const GiftDrawer: FC = () => {
                           syncMutation.mutate()
                           queryClient.invalidateQueries({ queryKey: ['my-telegram-gifts'] })
                         }}
-                        title="Refresh gifts"
+                        title={syncMutation.isPending ? "Syncing wallet gifts..." : "Refresh TON wallet gifts"}
                       >
                         <RefreshCw className={`w-4 h-4 ${syncMutation.isPending || telegramGiftsQuery.isFetching ? 'animate-spin' : ''}`} />
                       </button>
@@ -851,8 +856,11 @@ export const GiftDrawer: FC = () => {
               {isMyGiftsMode && (
                 <div className="mx-4 mb-3">
                   {(cachedGiftsQuery.isLoading || telegramGiftsQuery.isLoading || syncMutation.isPending) ? (
-                    <div className="flex justify-center py-8">
-                      <Spinner className="w-6 h-6" />
+                    // Skeleton grid for my-gifts loading — better perceived performance
+                    <div className="grid grid-cols-3 gap-2">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse" />
+                      ))}
                     </div>
                   ) : (cachedGiftsQuery.isError && telegramGiftsQuery.isError) ? (
                     <div className="text-center py-6 text-sm text-muted-foreground px-2">

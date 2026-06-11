@@ -235,10 +235,10 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
   // ── Drag-and-drop for tabs ─────────────────────────────────────────────────
   // Items are `disabled` when !isEditMode, so sensors don't interfere with
   // normal touch-scroll even though both PointerSensor and TouchSensor are active.
-  const sensors = useSensors(
+  const sensors = useMemo(() => useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
-  )
+  ), []) // sensors are stable for the lifetime of the tabs component
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -276,9 +276,32 @@ export default function ProfileGroupTabs({ user, isOwnProfile = false }: { user:
   }
 
   if (isLoading) {
+    // Skeleton for faster perceived loading - shows structure immediately
     return (
-      <div className="flex w-full justify-center">
-        <Spinner className="mt-5 size-8" />
+      <div className="w-full">
+        {/* Fake tabs skeleton */}
+        <div className="flex gap-2 px-4 overflow-x-auto scrollbar-hide mb-2">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-8 w-20 rounded-full bg-muted animate-pulse shrink-0"
+            />
+          ))}
+        </div>
+
+        {/* Fake grid skeleton (3x3) */}
+        <div className="px-4 space-y-2">
+          {[0, 1, 2].map((row) => (
+            <div key={row} className="grid grid-cols-3 gap-2">
+              {[0, 1, 2].map((col) => (
+                <div
+                  key={col}
+                  className="aspect-square rounded-lg bg-muted animate-pulse"
+                />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     )
   }

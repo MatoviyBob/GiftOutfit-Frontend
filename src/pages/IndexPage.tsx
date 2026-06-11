@@ -1,8 +1,9 @@
 import type { FC } from 'react'
-import { useMemo, useEffect, useRef } from 'react'
+import { useMemo, useEffect, useRef, lazy, Suspense } from 'react'
 import { Page } from '@/components/Page'
-import { GiftDrawer } from '@/components/gifts/GiftDrawer'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+
+const GiftDrawer = lazy(() => import('@/components/gifts/GiftDrawer'))
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react'
 import { ProfileHeader } from '@/components/profile/ProfileHeader'
 import { ProfileCard } from '@/components/profile/ProfileCard'
@@ -14,8 +15,10 @@ import { generateProfileShareLink } from '@/lib/shareProfile'
 import { trackProfileView, getUser, getMySettings, type TelegramUser } from '@/api/user'
 import { toast } from 'sonner'
 import { useTranslation } from '@/i18n'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Spinner } from '@/components/ui/spinner'
+import { getGrids } from '@/api/gifts'
+import { getConstructorCollections } from '@/api/constructor'
 
 export const IndexPage: FC = () => {
   const { t } = useTranslation()
@@ -30,6 +33,8 @@ export const IndexPage: FC = () => {
     enabled: !!telegramUser?.id,
   })
 
+  const queryClient = useQueryClient()
+
   // Загружаем настройки для получения реферального кода
   const { data: mySettings } = useQuery({
     queryKey: ['my-settings'],
@@ -37,6 +42,23 @@ export const IndexPage: FC = () => {
     enabled: !!telegramUser?.id,
   })
   const referralCode = mySettings?.referral_code
+
+  // Prefetch grids + constructor data + backgrounds as soon as we know the user.
+  // This makes opening the drawer, switching albums, and seeing gifts feel instant.
+  useEffect(() => {
+    if (telegramUser?.id) {
+      queryClient.prefetchQuery({
+        queryKey: ['grids', telegramUser.id],
+        queryFn: () => getGrids(telegramUser.id),
+      })
+      queryClient.prefetchQuery({
+        queryKey: ['constructor', 'collections'],
+        queryFn: getConstructorCollections,
+        staleTime: 1000 * 60 * 60 * 24,
+      })
+      // Backgrounds are fetched with long staleTime when needed in drawer/grid
+    }
+  }, [telegramUser?.id, queryClient])
 
   // Отслеживаем просмотр своего профиля при загрузке
   useEffect(() => {
@@ -136,7 +158,9 @@ export const IndexPage: FC = () => {
         </div>
 
         <ErrorBoundary>
-          <GiftDrawer />
+          <Suspense fallback={null}>
+            <GiftDrawer />
+          </Suspense>
         </ErrorBoundary>
       </div>
     </Page>
