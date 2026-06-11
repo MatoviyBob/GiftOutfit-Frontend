@@ -906,7 +906,7 @@ export const GiftDrawer: FC = () => {
                           <div
                             key={`u-${item.name}-${item.id}`}
                             style={background
-                              ? { background: `radial-gradient(circle, ${background.hex.centerColor} 0%, ${background.hex.edgeColor} 100%)` }
+                              ? { background: `radial-gradient(circle, ${background.hex?.centerColor ?? '#000000'} 0%, ${background.hex?.edgeColor ?? '#000000'} 100%)` }
                               : {}}
                             className={`relative aspect-square rounded-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform select-none overflow-hidden ${!background ? 'bg-card' : ''}`}
                             onClick={() => {
@@ -923,7 +923,7 @@ export const GiftDrawer: FC = () => {
                             <div className="relative h-full w-full flex items-center justify-center overflow-hidden rounded-lg">
                               {patternUrl && <PatternBackground image={patternUrl} />}
                               <div
-                                style={background ? { background: background.hex.edgeColor } : {}}
+                                style={background ? { background: background.hex?.edgeColor ?? '#000000' } : {}}
                                 className={`absolute top-2 -right-7 w-25 text-center ${!background ? 'bg-zinc-800' : ''} rotate-45 z-12`}
                               >
                                 <span className="text-xs text-white/80 font-medium">#{item.id}</span>

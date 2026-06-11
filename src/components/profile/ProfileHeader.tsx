@@ -75,7 +75,7 @@ export const ProfileHeader: FC<ProfileHeaderProps> = ({ user, isOwnProfile = fal
     : (user?.equipped_gift ?? null)
 
   const wornBgStyle = wornGift?.background
-    ? { background: `radial-gradient(circle, ${wornGift.background.hex.centerColor} 0%, ${wornGift.background.hex.edgeColor} 100%)` }
+    ? { background: `radial-gradient(circle, ${wornGift.background.hex?.centerColor ?? '#000000'} 0%, ${wornGift.background.hex?.edgeColor ?? '#000000'} 100%)` }
     : undefined
 
   const wornPatternUrl = wornGift?.pattern && wornGift?.name

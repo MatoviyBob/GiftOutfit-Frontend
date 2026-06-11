@@ -98,7 +98,7 @@ export const FavoritePaletteDrawer: FC<Props> = ({ open, onOpenChange }) => {
                   <div
                     className="w-[44px] h-[44px] rounded-md shrink-0 overflow-hidden"
                     style={{
-                      background: `radial-gradient(circle, ${bg.hex.centerColor} 0%, ${bg.hex.edgeColor} 100%)`,
+                      background: `radial-gradient(circle, ${bg.hex?.centerColor ?? '#000000'} 0%, ${bg.hex?.edgeColor ?? '#000000'} 100%)`,
                     }}
                   />
 

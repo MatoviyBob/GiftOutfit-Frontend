@@ -28,7 +28,7 @@ export const GiftCard: FC<Props> = memo(({
     <div
       style={{
         ...(gift?.background ? {
-          background: `radial-gradient(circle, ${gift.background.hex.centerColor} 0%, ${gift.background.hex.edgeColor} 100%)`
+          background: `radial-gradient(circle, ${gift.background.hex?.centerColor ?? '#000000'} 0%, ${gift.background.hex?.edgeColor ?? '#000000'} 100%)`
         } : {})
       }}
       className={`${!gift?.background ? 'bg-card' : ''} border-0 relative aspect-square rounded-lg flex items-center justify-center border border-border/50 ${isClickable ? 'cursor-pointer active:scale-95' : 'cursor-default'} transition-transform select-none overflow-hidden`}
@@ -56,7 +56,7 @@ export const GiftCard: FC<Props> = memo(({
           <div 
             style={{
               ...(gift?.background ? {
-                background: gift.background.hex.edgeColor
+                background: gift.background.hex?.edgeColor ?? '#000000'
               } : {})
             }}
             className={`absolute top-2 -right-7 w-25 text-center ${!gift?.background ? 'bg-zinc-800' : ''} rotate-45 z-12`}

@@ -110,7 +110,7 @@ export const SearchDrawer: FC<Props> = ({ open, onOpenChange, title, items, isLo
                   <div
                     className="w-[44px] h-[44px] rounded-md text-white overflow-hidden"
                     style={{
-                      background: `radial-gradient(circle, ${item.background?.hex.centerColor} 0%, ${item.background?.hex.edgeColor} 100%)`
+                      background: `radial-gradient(circle, ${item.background?.hex?.centerColor ?? '#000000'} 0%, ${item.background?.hex?.edgeColor ?? '#000000'} 100%)`
                     }}
                   />
                 )}

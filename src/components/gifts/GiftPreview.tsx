@@ -38,7 +38,7 @@ export const GiftPreview: FC<GiftPreviewProps> = ({ gift, onDelete }) => {
 
   const backgroundStyle = gift.background
     ? {
-        background: `radial-gradient(circle, ${gift.background.hex.centerColor} 0%, ${gift.background.hex.edgeColor} 100%)`,
+        background: `radial-gradient(circle, ${gift.background.hex?.centerColor ?? '#000000'} 0%, ${gift.background.hex?.edgeColor ?? '#000000'} 100%)`,
       }
     : undefined
 
